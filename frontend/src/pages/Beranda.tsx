@@ -29,7 +29,7 @@ export default function Beranda() {
     <div className="min-h-svh bg-background">
       <PublicHeader />
       <Hero total={data?.length ?? 0} />
-      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8" id="katalog">
+      <section className="mx-auto max-w-7xl scroll-mt-16 px-4 py-14 sm:px-6 lg:px-8" id="katalog">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-base font-bold tracking-tight text-foreground md:text-lg">Lapak tersedia</h2>

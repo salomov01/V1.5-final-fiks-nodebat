@@ -5,6 +5,7 @@ per kombinasi username + alamat IP. Tidak memakai memori proses agar tetap
 bekerja setelah server reload.
 """
 
+import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, Request
@@ -17,10 +18,13 @@ KUNCI_MENIT = 15          # lama penguncian setelah melewati batas
 
 
 def client_ip(request: Request) -> str:
-    """Alamat IP pemanggil, menghormati header proxy/ingress."""
+    """IP klien dari X-Forwarded-For: lewati TRUSTED_PROXY_HOPS hop terakhir (CDN + load balancer)
+    agar entri awal yang bisa dipalsukan klien tidak dipercaya."""
     fwd = request.headers.get("x-forwarded-for")
     if fwd:
-        return fwd.split(",")[0].strip()
+        hops = [h.strip() for h in fwd.split(",") if h.strip()]
+        skip = int(os.environ.get("TRUSTED_PROXY_HOPS", "2"))
+        return hops[max(0, len(hops) - 1 - skip)]
     return request.client.host if request.client else "unknown"
 
 

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 function waLink(p: Pendaftaran): string {
   const text = [
@@ -32,10 +33,7 @@ export default function DaftarLapakDialog({ lapak, onClose }: { lapak: LapakPubl
 
   const daftar = useMutation({
     mutationFn: () => apiPost<Pendaftaran>("/publik/pendaftaran", { ...form, lapak_id: lapak?.id }),
-    onSuccess: (p) => {
-      setHasil(p);
-      window.open(waLink(p), "_blank", "noopener");
-    },
+    onSuccess: (p) => setHasil(p),
     onError: (e) => {
       const d = e instanceof ApiError && e.body && typeof e.body === "object" && "detail" in e.body
         ? (e.body as { detail: unknown }).detail : null;
@@ -66,7 +64,7 @@ export default function DaftarLapakDialog({ lapak, onClose }: { lapak: LapakPubl
               Data Anda sudah tercatat. Kirim pesan WhatsApp ke admin agar pendaftaran segera dikonfirmasi.
             </p>
             <a href={waLink(hasil)} target="_blank" rel="noopener noreferrer" data-testid="btn-kirim-wa-admin"
-              className={buttonVariants({ className: "w-full bg-emerald-600 hover:bg-emerald-700" })}>
+              className={cn(buttonVariants(), "w-full !bg-emerald-600 !text-white hover:!bg-emerald-700")}>
               <MessageCircle data-icon="inline-start" className="size-4" /> Kirim ke WhatsApp Admin
             </a>
             <Button variant="ghost" onClick={close} data-testid="btn-tutup-daftar">Tutup</Button>

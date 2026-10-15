@@ -26,13 +26,13 @@ export default function LapakCard({
         </span>
         <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Kosong</span>
       </div>
-      <h3 className="mt-4 text-base font-bold text-foreground" data-testid="lapak-card-blok">{lapak.blok}</h3>
+      <h3 className="mt-4 text-base font-bold text-foreground" data-testid="lapak-blok">{lapak.blok}</h3>
       <p className="text-sm text-muted-foreground">
         {lapak.jenis || "Umum"} • Sewa {KATEGORI_LABEL[lapak.kategori]}
       </p>
       {lapak.deskripsi && <p className="mt-2 text-sm text-muted-foreground">{lapak.deskripsi}</p>}
       <div className="mt-5 flex items-end justify-between gap-3 border-t border-border pt-4">
-        <p className="font-mono text-lg font-semibold text-foreground" data-testid="lapak-card-tarif">
+        <p className="font-mono text-lg font-semibold text-foreground" data-testid="lapak-tarif">
           {formatRupiah(lapak.tarif)}
           <span className="ml-1 text-xs font-normal text-muted-foreground">{SATUAN[lapak.kategori]}</span>
         </p>

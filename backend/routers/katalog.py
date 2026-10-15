@@ -69,6 +69,8 @@ async def daftar(input: PendaftaranCreate, request: Request):
         raise HTTPException(status_code=429, detail="Terlalu banyak pendaftaran. Coba lagi dalam 1 jam.")
     unit = await _get_unit(input.lapak_id)
     await _cek_kosong(unit)
+    if await db.pendaftaran.find_one({"lapak_id": unit.id, "no_hp": input.no_hp.strip(), "status": "baru"}):
+        raise HTTPException(status_code=409, detail="Nomor ini sudah mendaftar lapak tersebut — tunggu konfirmasi admin")
     item = Pendaftaran(
         nama=input.nama.strip(), no_hp=input.no_hp.strip(), lapak_id=unit.id, blok=unit.blok,
         jenis=unit.jenis, kategori=unit.kategori, tarif=unit.tarif, catatan=input.catatan.strip(),
@@ -106,8 +108,11 @@ async def update_unit(unit_id: str, input: LapakUnitUpdate, actor: str = Depends
     changes = input.model_dump(exclude_none=True)
     if "blok" in changes:
         changes["blok"] = changes["blok"].strip()
-        if changes["blok"] != unit.blok and await db.lapak_units.find_one({"blok": changes["blok"]}):
-            raise HTTPException(status_code=409, detail=f"Lapak {changes['blok']} sudah ada di katalog")
+        if changes["blok"] != unit.blok:
+            if await db.lapak_units.find_one({"blok": changes["blok"]}):
+                raise HTTPException(status_code=409, detail=f"Lapak {changes['blok']} sudah ada di katalog")
+            if unit.blok in await _terisi_map():
+                raise HTTPException(status_code=409, detail="Nama lapak tidak bisa diubah selama masih disewa")
     if changes:
         await db.lapak_units.update_one({"id": unit_id}, {"$set": changes})
         await log_activity(actor, "ubah", "lapak", unit_id, changes.get("blok", unit.blok))
@@ -117,7 +122,10 @@ async def update_unit(unit_id: str, input: LapakUnitUpdate, actor: str = Depends
 @admin_router.delete("/lapak-unit/{unit_id}")
 async def delete_unit(unit_id: str, actor: str = Depends(require_session)):
     unit = await _get_unit(unit_id)
+    if unit.blok in await _terisi_map():
+        raise HTTPException(status_code=409, detail="Lapak masih disewa — tidak bisa dihapus")
     await db.lapak_units.delete_one({"id": unit_id})
+    await db.pendaftaran.update_many({"lapak_id": unit_id, "status": "baru"}, {"$set": {"status": "ditolak"}})
     await log_activity(actor, "hapus", "lapak", unit_id, unit.blok)
     return {"deleted": True}
 
@@ -151,11 +159,23 @@ def _selesai_default(kategori: str, mulai: str) -> str:
 async def terima(pid: str, input: TerimaInput, actor: str = Depends(require_session)):
     item = await _get_baru(pid)
     unit = await _get_unit(item.lapak_id)
-    await _cek_kosong(unit)
     mulai = input.mulai or today_iso()
     selesai = input.selesai or _selesai_default(unit.kategori, mulai)
     if selesai < mulai:
         raise HTTPException(status_code=422, detail="Tanggal selesai harus setelah tanggal mulai")
+    # Kunci atomik per lapak agar dua penerimaan bersamaan tidak membuat dua penyewa.
+    if not await db.lapak_units.find_one_and_update({"id": unit.id, "lock": {"$ne": True}}, {"$set": {"lock": True}}):
+        raise HTTPException(status_code=409, detail="Lapak sedang diproses, coba lagi")
+    try:
+        await _cek_kosong(unit)
+        if not await db.pendaftaran.find_one({"id": pid, "status": "baru"}):
+            raise HTTPException(status_code=409, detail="Pendaftaran sudah diproses")
+        return await _buat_penyewa(pid, item, unit, mulai, selesai, actor)
+    finally:
+        await db.lapak_units.update_one({"id": unit.id}, {"$unset": {"lock": ""}})
+
+
+async def _buat_penyewa(pid: str, item: Pendaftaran, unit: LapakUnit, mulai: str, selesai: str, actor: str) -> Tenant:
     tenant = Tenant(
         nomor_id=await next_nomor_id(), nama_lengkap=item.nama, no_hp=item.no_hp,
         kategori=unit.kategori, blok=unit.blok, tarif=unit.tarif, mulai=mulai, selesai=selesai,

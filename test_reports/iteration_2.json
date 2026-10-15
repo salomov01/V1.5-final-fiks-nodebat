@@ -1,0 +1,42 @@
+{
+  "summary": "First test of public stall catalog + online registration + admin confirmation under /dashboard/*. Backend: 11/11 pytest pass (public lapak-kosong w/o PII, 401 on admin endpoints, unit CRUD + duplicate 409, register->terima creates LPK-JMB tenant + auto-reject other pending + stall disappears from public, 409 on occupied stall and on re-accept, expiry (selesai in past) and status berhenti free the stall, tolak + double-tolak 409, terima invalid dates 422, 404/422 validation, 5/hour rate limit 429). Frontend: public page (hero, count, filters, cards, Daftar dialog -> daftar-sukses with correct wa.me/6281234567890 link incl. /dashboard/pendaftaran URL), unauth redirects (/dashboard, /dashboard/scan-qr, /lapak, /pengaturan -> /login), login -> /dashboard, all 8 nav links under /dashboard/*, badge-pendaftaran-baru count, terima dialog prefilled dates + toast 'X kini penyewa LPK-JMB-017', sibling registration auto 'ditolak', tolak via UI, katalog add/edit/delete unit + Kosong/Terisi s.d. status, public page updates, topbar-btn-halaman-publik, mobile layout, QR scan regression (LPK-JMB-001 -> penagih -> Sudah Bayar -> LUNAS toast). All core flows PASS; only security/robustness issues found.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/publik/pendaftaran", "issue": "Rate limit (5/IP/hour) is trivially bypassable: lib/ratelimit.client_ip() trusts the FIRST X-Forwarded-For entry, which is client-controlled and passed through by the ingress. Verified via public URL: 9+ registrations in a row succeeded by sending random X-Forwarded-For headers. Same weakness applies to the login brute-force guard. Fix: use the last (proxy-appended) XFF hop / a trusted-proxy count, or X-Real-IP set by ingress.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "DELETE /api/lapak-unit/{id}", "issue": "Allows deleting a unit that is currently occupied (verified: deleted TEST unit while tenant LPK-JMB-017 was active) and leaves pending 'baru' registrations orphaned (later terima -> 404). Consider blocking delete when terisi or auto-rejecting its pending registrations."},
+      {"endpoint": "PUT /api/lapak-unit/{id}", "issue": "Renaming blok of an occupied unit breaks the blok-string link to the tenant -> stall instantly shows 'kosong' on public page while still rented. Occupancy also depends on exact string match (case/whitespace) between lapak_units.blok and tenants.blok."},
+      {"endpoint": "POST /api/pendaftaran/{id}/terima", "issue": "Not atomic: _cek_kosong + insert tenant + status update are separate ops; two concurrent accepts for the same stall can both create tenants. Use find_one_and_update({id, status:'baru'}) as a guard."},
+      {"endpoint": "POST /api/publik/pendaftaran", "issue": "No dedupe: same phone can register repeatedly for the same stall (only limited by the bypassable rate limit)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DaftarLapakDialog", "issue": "window.open(waLink) is called in mutation onSuccess (after async request) - not a user gesture, so popup blockers block it (0 popups opened in test). Fallback button btn-kirim-wa-admin works, so low impact; consider relying on the button only or opening a blank window synchronously on submit.", "selector": "[data-testid='btn-kirim-pendaftaran']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Beranda (public)", "issues": ["Clicking 'Lihat lapak kosong' (#katalog anchor) scrolls the 'Lapak tersedia' heading under the sticky header (add scroll-mt-20 to #katalog section)", "btn-kirim-wa-admin has bg-emerald-600 class but renders dark slate (class merged/overridden by buttonVariants) - WhatsApp green intent lost", "Nested testids 'lapak-card-blok'/'lapak-card-tarif' share the 'lapak-card-' prefix with card container testids 'lapak-card-{id}' -> prefix selectors return 3x cards; consider renaming to 'lapak-blok'/'lapak-tarif'"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_katalog_pendaftaran.py", "/app/test_reports/pytest/pytest_katalog.xml"],
+  "action_items": [
+    "Fix client_ip() X-Forwarded-For spoofing so pendaftaran rate limit (and login guard) cannot be bypassed",
+    "Guard DELETE /lapak-unit when stall is occupied / auto-reject its pending registrations",
+    "Make terima atomic (conditional update on status 'baru') to avoid double tenants",
+    "Optional: handle blok rename for occupied units; add scroll-margin to #katalog; make WA button green; remove reliance on window.open after async"
+  ],
+  "critical_code_review_comments": [
+    "routers/katalog.py: _terisi_map() loads all active tenants on every public request - fine at this scale, consider index on tenants(status, selesai)",
+    "Public LapakPublik response model correctly strips tenant data; admin GET /pendaftaran excludes ip field - good",
+    "QR scan 'Sudah Bayar' does not appear to prevent duplicate LUNAS payments for the same periode (LPK-JMB-001 shows two 'Sewa Tahunan 2026 Lunas' rows) - pre-existing, verify intended"
+  ],
+  "updated_files": ["/app/backend/tests/test_katalog_pendaftaran.py"],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% of requested flows"},
+  "test_credentials": "pengelola / jimbaran2026 (from /app/memory/test_credentials.md) - worked",
+  "seed_data_creation": "All TEST_ tenants/registrations/units removed after tests (tenants back to 14, units 20). One extra LUNAS payment was recorded for LPK-JMB-001 by the QR scan regression test (left in place).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run backend tests with: cd /app/backend && BACKEND_URL=$REACT_APP_BACKEND_URL python -m pytest tests/test_katalog_pendaftaran.py -n0. Tests spoof X-Forwarded-For per request to dodge the rate limit - if the XFF fix lands, these tests will start hitting 429 (clear db.pendaftaran or adjust). Pendaftaran list card selector: '[data-testid^=\"pendaftaran-\"]:not([data-testid=\"pendaftaran-list\"])'. Unit delete uses window.confirm."
+}
