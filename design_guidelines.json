@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project_name": "Sistem Informasi Manajemen Lapak & Pembayaran - Pasar Desa Adat Jimbaran",
+  "archetype": "MODERN_ADMIN_PANEL_CIVIC_FINTECH",
+  "language": "id-ID",
+  "currency_format": "IDR (Rp)",
+  "date_format": "DD/MM/YYYY (WITA)",
+  "template_type": "farm-ts",
+  "theme": "light_with_clean_slate_accents",
+  "design_intent": {
+    "visual_reference": "Modern clean admin inspired by digipanel layout aesthetic with custom Balinese civic nuances (warm amber gold accent, crisp deep slate navy, pristine cards, clean rounded buttons, high-contrast badges, scannable data tables).",
+    "tone": "Profesional, Bersih, Akuntabel, dan Intuitif untuk Pengelola Pasar Desa Adat Jimbaran",
+    "target_users": "Pengelola Pasar Adat Jimbaran, Petugas Lapangan/Juru Pungut, Bendahara Desa Adat, & Penyewa Lapak"
+  },
+  "typography": {
+    "font_family_heading": "Plus Jakarta Sans Variable, sans-serif",
+    "font_family_body": "Plus Jakarta Sans Variable, sans-serif",
+    "font_family_mono": "IBM Plex Mono, monospace",
+    "font_imports": [
+      "@import \"@fontsource-variable/plus-jakarta-sans\";",
+      "@import \"@fontsource/ibm-plex-mono\";"
+    ],
+    "scale_px": {
+      "display": 40,
+      "h1": 32,
+      "h2": 24,
+      "h3": 20,
+      "body": 16,
+      "caption": 14
+    },
+    "hierarchy_rules": {
+      "h1": "text-2xl sm:text-3xl font-bold tracking-tight text-slate-900",
+      "h2": "text-xl sm:text-2xl font-semibold tracking-tight text-slate-900",
+      "h3": "text-lg sm:text-xl font-semibold text-slate-800",
+      "h4": "text-base sm:text-lg font-medium text-slate-800",
+      "body": "text-sm sm:text-base font-normal leading-relaxed text-slate-700",
+      "caption": "text-xs sm:text-sm font-medium text-slate-500",
+      "code_mono": "font-mono text-xs sm:text-sm font-semibold tracking-wider text-slate-900"
+    }
+  },
+  "colors": {
+    "primary_brand": {
+      "main": "#0F172A",
+      "hover": "#1E293B",
+      "active": "#020617",
+      "accent_gold": "#D97706",
+      "accent_gold_hover": "#B45309",
+      "accent_emerald": "#059669"
+    },
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#F8FAFC",
+        "on_bg": "#0F172A",
+        "on_bg_muted": "#64748B",
+        "roles": {
+          "border": "#E2E8F0",
+          "link": "#0284C7",
+          "error": "#DC2626",
+          "success": "#16A34A",
+          "warning": "#D97706",
+          "info": "#2563EB"
+        }
+      },
+      {
+        "name": "sidebar",
+        "kind": "solid",
+        "bg": "#0F172A",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "border": "#1E293B",
+          "active_item_bg": "#1E293B",
+          "active_item_text": "#F59E0B",
+          "hover_item_bg": "#1E293B/60",
+          "badge_bg": "#F59E0B",
+          "badge_text": "#0F172A"
+        }
+      },
+      {
+        "name": "header_navbar",
+        "kind": "solid",
+        "bg": "#FFFFFF",
+        "on_bg": "#0F172A",
+        "on_bg_muted": "#64748B",
+        "roles": {
+          "border": "#E2E8F0",
+          "search_bg": "#F1F5F9",
+          "search_text": "#0F172A"
+        }
+      },
+      {
+        "name": "panel_card",
+        "kind": "solid",
+        "bg": "#FFFFFF",
+        "on_bg": "#0F172A",
+        "on_bg_muted": "#64748B",
+        "roles": {
+          "border": "#E2E8F0",
+          "header_bg": "#FAFAFA",
+          "highlight": "#EFF6FF"
+        }
+      },
+      {
+        "name": "table_surface",
+        "kind": "solid",
+        "bg": "#FFFFFF",
+        "on_bg": "#1E293B",
+        "on_bg_muted": "#64748B",
+        "roles": {
+          "header_bg": "#F8FAFC",
+          "header_text": "#475569",
+          "row_hover": "#F1F5F9",
+          "border": "#E2E8F0"
+        }
+      },
+      {
+        "name": "qr_card_hero",
+        "kind": "solid",
+        "bg": "#0F172A",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#CBD5E1",
+        "roles": {
+          "border": "#334155",
+          "qr_container_bg": "#FFFFFF",
+          "qr_container_text": "#0F172A",
+          "tag_gold": "#F59E0B"
+        }
+      },
+      {
+        "name": "badge_success",
+        "kind": "solid",
+        "bg": "#DCFCE7",
+        "on_bg": "#15803D",
+        "on_bg_muted": "#166534"
+      },
+      {
+        "name": "badge_warning",
+        "kind": "solid",
+        "bg": "#FEF3C7",
+        "on_bg": "#B45309",
+        "on_bg_muted": "#92400E"
+      },
+      {
+        "name": "badge_danger",
+        "kind": "solid",
+        "bg": "#FEE2E2",
+        "on_bg": "#B91C1C",
+        "on_bg_muted": "#991B1B"
+      },
+      {
+        "name": "badge_neutral",
+        "kind": "solid",
+        "bg": "#F1F5F9",
+        "on_bg": "#334155",
+        "on_bg_muted": "#475569"
+      }
+    ],
+    "accent": "#D97706",
+    "on_accent": "#FFFFFF"
+  },
+  "entry_surfaces": {
+    "/": "admin shell layout — dark compact sidebar with gold badge, clean white topbar with live search & quick stats, and bento KPI cards atop scannable tenant activity",
+    "/lapak": "data management view — filtering header with search & category pills (Harian/Bulanan/Tahunan), tabular tenant directory with QR quick action & modal CRUD",
+    "/pembayaran": "payment verification queue — dual-pane verification split with pending requests list left, detail verification receipt & confirmation panel right",
+    "/scan-qr": "interactive camera scanner view — full viewport camera viewfinder box with live scanner target frame, instant matched tenant dossier card & quick confirm action",
+    "/laporan": "financial reporting summary — revenue breakdowns by stall category, collection timeline graph, and exportable recap tables"
+  },
+  "layout_and_navigation": {
+    "sidebar_style": "Fixed dark slate sidebar (w-64 desktop) with collapsible mobile drawer, carrying Desa Adat Jimbaran logo, active state pill indicator with gold accent, and badge counts for 'Menunggu Konfirmasi'",
+    "topbar_style": "Sticky white top navigation with live market clock (WITA), quick search tenant bar, 'Pindai QR' quick trigger button, and admin avatar profile",
+    "bento_grid_rules": "Dashboard cards use 12-column responsive layout: 4 stat metric cards (grid-cols-1 sm:grid-cols-2 lg:grid-cols-4), split charts & quick tables (col-span-12 lg:col-span-8 and col-span-12 lg:col-span-4)",
+    "table_design": "Modern compact data table with subtle row hover, avatar/badge for tenant category, monospace formatted ID Lapak, sticky header on long scroll, and pagination toolbar",
+    "mobile_drawer": "Smooth slide-over sheet triggered by hamburger icon on viewports < 1024px"
+  },
+  "key_features_and_components": {
+    "dashboard_overview": {
+      "route": "/",
+      "widgets": [
+        "Total Lapak Tersewa (Kapasitas Pasar, e.g. 142/160 Lapak)",
+        "Pemasukan Bulan Ini (Format Rupiah IDR)",
+        "Tagihan Menunggu Konfirmasi (Badge Alert)",
+        "Penyewa Aktif (Kategori: Harian, Bulanan, Tahunan)",
+        "Grafik Trend Pendapatan Sewa (Recharts Line/Bar)",
+        "Tabel Transaksi & Pendaftaran Terbaru dengan Quick Action Verifikasi"
+      ]
+    },
+    "lapak_management": {
+      "route": "/lapak",
+      "capabilities": [
+        "CRUD Data Penyewa Lapak (Nomor Lapak, Blok Pasar, Nama Lengkap Penyewa, NIK, No WhatsApp, Kategori Sewa [Harian, Bulanan, Tahunan], Tarif Sewa, Tanggal Mulai, Tanggal Jatuh Tempo, Status Pembayaran)",
+        "Filter Kategori Sewa (Semua, Harian, Bulanan, Tahunan) & Filter Blok (Blok A Pangan, Blok B Sayur & Buah, Blok C Daging/Ikan, Blok D Pakaian & Canang)",
+        "Pencarian Real-time berdasarkan Nama Penyewa, Nomor ID, atau Nomor Lapak",
+        "Generate QR Code Otomatis per penyewa (Format Data: Nama Lengkap + Nomor ID Lapak)",
+        "Modal Kartu Identitas Penyewa Lapak ber-QR dengan fitur 'Download PNG' dan 'Cetak ID Card Pasar'"
+      ]
+    },
+    "pembayaran_management": {
+      "route": "/pembayaran",
+      "capabilities": [
+        "Daftar Verifikasi Pembayaran (Status: Menunggu Konfirmasi, Terverifikasi, Belum Bayar, Terlambat)",
+        "Detail Bukti Bayar / Metode (Tunai via Petugas Pasar, QRIS Desa Adat, Transfer Bank LPD Jimbaran)",
+        "Action Satu-Klik: 'Konfirmasi Lunas' (Otomatis update status & terbitkan kuitansi digital desa adat)",
+        "Action 'Tolak/Minta Bukti Ulang' dengan modal catatan",
+        "Riwayat Pembayaran & Cetak Kuitansi Pembayaran Resmi Desa Adat Jimbaran"
+      ]
+    },
+    "scan_qr_flow": {
+      "route": "/scan-qr",
+      "capabilities": [
+        "Pemindai QR Kamera langsung via 'html5-qrcode' library yang stabil",
+        "Dukungan kamera depan/belakang (Switch camera selector)",
+        "Fallback upload gambar QR / Input Manual ID jika kamera tidak tersedia",
+        "Hasil Scan Instan: Menampilkan Kartu Data Penyewa (Nama Lengkap, Nomor ID, Blok Lapak, Status Tagihan)",
+        "Tombol Cepat: 'Catat Pembayaran Hari Ini', 'Lihat Riwayat', 'Kirim Pengingat WhatsApp'"
+      ]
+    }
+  },
+  "qr_code_specifications": {
+    "payload_format": "JSON string: {\"id\":\"LPK-JMB-014\",\"nama\":\"I Wayan Sudira\",\"blok\":\"Blok A-12\"} atau format teks terstruktur 'LPK-JMB-014 | I Wayan Sudira'",
+    "generation_library": "qrcode atau qrcode.react (ringan, client-side SVG/Canvas rendering)",
+    "scanner_library": "html5-qrcode (teruji stabil untuk browser modern desktop & mobile camera)"
+  },
+  "image_urls": [
+    {
+      "category": "hero_and_branding",
+      "description": "Arsitektur Khas Bali & Suasana Budaya Jimbaran untuk Header Banner & Identitas Pasar",
+      "image_url": "https://images.unsplash.com/photo-1711609110590-5ad5c4599e56?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzJ8MHwxfHNlYXJjaHwyfHxiYWxpJTIwY3VsdHVyZSUyMHRlbXBsZSUyMGFyY2hpdGVjdHVyZXxlbnwwfHx8fDE3OTA3NDAwNzV8MA&ixlib=rb-4.1.0&q=85"
+    },
+    {
+      "category": "market_context",
+      "description": "Suasana Lapak dan Pedagang Pasar Tradisional Indonesia untuk Ilustrasi & Empty State",
+      "image_url": "https://images.unsplash.com/photo-1598063413828-0d42356b9573?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwzfHx0cmFkaXRpb25hbCUyMG1hcmtldCUyMHZlbmRvciUyMHN0YWxsJTIwaW5kb25lc2lhfGVufDB8fHx8MTc5MDc0MDA3NXww&ixlib=rb-4.1.0&q=85"
+    },
+    {
+      "category": "stall_display",
+      "description": "Aktivitas Kios Lapak Pasar Tradisional untuk Widget Profil",
+      "image_url": "https://images.unsplash.com/photo-1603958123897-902ccdc49738?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHw0fHx0cmFkaXRpb25hbCUyMG1hcmtldCUyMHZlbmRvciUyMHN0YWxsJTIwaW5kb25lc2lhfGVufDB8fHx8MTc5MDc0MDA3NXww&ixlib=rb-4.1.0&q=85"
+    }
+  ],
+  "motion_and_interactions": {
+    "transitions": "Gunakan Tailwind transition-all duration-200 ease-out untuk hover button, active sidebar pills, dan modal dialog popovers",
+    "scan_animation": "Gunakan animated green scanner beam overlay pada kamera viewfinder saat scanning berlangsung",
+    "table_row_interaction": "Hover highlight 'hover:bg-slate-50' dengan cursor pointer pada baris data",
+    "badge_animations": "Pulsing amber dot untuk status 'Menunggu Konfirmasi'"
+  },
+  "accessibility_and_contrast": {
+    "contrast_ratio": "Seluruh teks memenuhi standar WCAG AA (minimal 4.5:1 untuk teks normal)",
+    "test_attributes": "Setiap tombol, input form, filter tab, baris tabel, dan modal WAJIB menyertakan data-testid terstandar (contoh: data-testid=\"btn-tambah-penyewa\", data-testid=\"input-search-penyewa\", data-testid=\"qr-scanner-box\", data-testid=\"btn-konfirmasi-pembayaran\")",
+    "keyboard_navigation": "Modal dapat ditutup dengan tombol Esc, formulir dapat dinavigasi dengan Tab, focus ring jelas 'focus:ring-2 focus:ring-amber-500/50'"
+  },
+  "instructions_to_main_agent": [
+    "1. Terapkan bahasa antarmuka Bahasa Indonesia yang ramah, formal, dan jelas (e.g. 'Desa Adat Jimbaran', 'Pendataan Lapak Pasar', 'Konfirmasi Pembayaran', 'Pindai QR Code').",
+    "2. Gunakan layout admin panel modern: Sidebar gelap elegan (Slate 900) dengan logo Desa Adat Jimbaran, Topbar bersih dengan status WITA & search, serta Content Area berlatar Slate-50 dengan kartu data putih bersih.",
+    "3. Buat fitur CRUD Lapak lengkap dengan kategori sewa: Harian (Rp 15.000 - Rp 30.000/hari), Bulanan (Rp 350.000 - Rp 750.000/bulan), dan Tahunan (Rp 3.500.000 - Rp 8.000.000/tahun).",
+    "4. Sediakan fitur Generate QR Code untuk setiap penyewa (hanya berisi Nama Lengkap & ID Lapak) dan sertakan modal preview QR Card dengan tombol download/cetak.",
+    "5. Implementasikan pemindai QR kamera interaktif (html5-qrcode) di halaman /scan-qr dengan fallback simulasi scan / upload file agar mudah diuji pada semua perangkat.",
+    "6. Buat halaman Konfirmasi Pembayaran lengkap dengan filter status (Menunggu Konfirmasi, Lunas, Terlambat), rincian tagihan, dan tombol konfirmasi yang langsung memperbarui status penyewa.",
+    "7. Sediakan data awal (seed data) yang kaya dan realistis khas pasar Jimbaran (nama penyewa Bali seperti I Wayan Sudira, Ni Made Rai, I Ketut Arnawa, pedagang ikan, canang, sembako, bumbu dapur).",
+    "8. Selalu sertakan data-testid pada seluruh elemen interaktif."
+  ]
+}

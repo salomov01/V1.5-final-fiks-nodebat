@@ -1,0 +1,116 @@
+{
+  "iteration": 1,
+  "summary": "SIPLAP post-security-audit regression: all 8 acceptance criteria exercised. 19 backend pytest assertions across 7 files + 8 named browser checks all pass. Main risk (new CSRF/Content-Type middleware blocking legitimate writes) was explicitly disproven: tenant/payment create/update/delete, confirm/reject, bulk billing, password change, and Excel export all succeed from the browser with zero 403/415s; a dedicated backend test also proves the middleware correctly rejects a spoofed Sec-Fetch-Site:cross-site request (403) and a non-JSON body (415) while real requests pass.",
+  "passed": 16,
+  "failed": 0,
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false,
+  "checks": [
+    {
+      "criterion": "Login pengelola dan gerbang autentikasi",
+      "name": "test_tscheck_login_auth.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /auth/login (correct creds) -> 200 + siplap_session cookie; GET /auth/me -> 200; POST /auth/logout -> 200; GET /auth/me after logout -> 401. Negative: POST /auth/login (throwaway user, wrong pw) -> 401; GET /auth/me with no cookie -> 401."
+    },
+    {
+      "criterion": "Login pengelola dan gerbang autentikasi",
+      "name": "login-gate-dashboard-logout",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "GET / without session redirected to /login (kartu-login visible). Login with pengelola/jimbaran2026 -> judul-dashboard + stat-cards visible. btn-logout -> back to kartu-login. Ran against APP_URL ingress https://lapak-payment-hub.preview.emergentagent.com."
+    },
+    {
+      "criterion": "Tambah, ubah, dan hapus penyewa lapak (aksi tulis lewat browser)",
+      "name": "test_tscheck_tenant_crud_and_csrf.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /tenants -> 201 with nomor_id LPK-JMB-###; PUT /tenants/{id} -> 200; DELETE /tenants/{id} -> 200 then GET -> 404. Negative: POST with header Sec-Fetch-Site:cross-site -> 403; POST with Content-Type application/x-www-form-urlencoded -> 415; POST with tarif=0 -> 422."
+    },
+    {
+      "criterion": "Tambah, ubah, dan hapus penyewa lapak (aksi tulis lewat browser)",
+      "name": "lapak-tenant-crud",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Created tscheck-tenant-<ts> via Tambah Penyewa dialog -> row appears with Nomor ID matching /^LPK-JMB-\\d{3}$/, no 403/415 console errors. Edited blok field via Ubah -> row reflects new value. Deleted via Hapus+konfirmasi -> row gone (empty-state-lapak shown after search)."
+    },
+    {
+      "criterion": "Tarif otomatis terisi dari kategori sewa",
+      "name": "tenant-tarif-auto-fill",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Selecting Bulanan/Tahunan/Harian in Tambah Penyewa filled tarif 450000/5000000/25000 respectively. After manually setting tarif=7777777, switching kategori to Bulanan left the field at 7777777 (manual value preserved, not overwritten)."
+    },
+    {
+      "criterion": "Catat pembayaran dan konfirmasi (PATCH) plus pencegahan konfirmasi ganda",
+      "name": "test_tscheck_payment_confirm_reject.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /payments -> 201 status=menunggu; PATCH /payments/{id}/confirm -> 200 status=lunas; second PATCH .../confirm -> 409. PATCH .../reject on a menunggu payment -> 200 status=ditolak; second .../reject -> 409. POST /payments with jumlah=0 -> 422."
+    },
+    {
+      "criterion": "Catat pembayaran dan konfirmasi (PATCH) plus pencegahan konfirmasi ganda",
+      "name": "payment-record-confirm-reject",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Catat Pembayaran dialog created a tscheck-periode-<ts> bill -> appears in tab Menunggu. Konfirmasi moved it to tab Lunas. A second bill was created and Tolak moved it to status Ditolak under tab Semua. No 403/415 errors observed."
+    },
+    {
+      "criterion": "Ekspor Excel berfilter dan kuitansi cetak",
+      "name": "test_tscheck_export_excel.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /laporan/pembayaran.xlsx?status=lunas -> 200, content starts with PK (valid zip/xlsx magic bytes). Same for ?bulan=2026-09&kategori=bulanan."
+    },
+    {
+      "criterion": "Ekspor Excel berfilter dan kuitansi cetak",
+      "name": "export-excel-and-receipt",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Ekspor Excel dialog with bulan=2026-09 -> Unduh triggered a real browser download event with a .xlsx filename. On tab Lunas, Kuitansi button opened dialog-kuitansi showing kuitansi-nomor containing 'KW-', kuitansi-jumlah, and 'Terbilang' text for a fixture payment confirmed via API setup."
+    },
+    {
+      "criterion": "Tagihan Massal bersifat idempotent",
+      "name": "test_tscheck_bulk_billing_idempotent.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /payments/bulk-monthly (1st call) -> 200 {dibuat, dilewati, periode}; immediate 2nd call -> 200 dibuat=0 and dilewati >= 1st call's dibuat, same periode (idempotent, no duplicate bills)."
+    },
+    {
+      "criterion": "Tagihan Massal bersifat idempotent",
+      "name": "bulk-billing-idempotent",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Dialog Tagihan Massal showed penyewa bulanan aktif count + estimasi. Terbitkan Tagihan -> dialog closed with success toast. Reopening + Terbitkan again immediately showed toast 'Semua penyewa bulanan sudah punya tagihan September 2026' (visible in screenshot) — confirms no duplicate rows created."
+    },
+    {
+      "criterion": "Rekap Tunggakan, Pindai QR manual, dan Riwayat Aktivitas",
+      "name": "test_tscheck_overdue_scanqr_activities.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /payments/overdue -> 200, items[].hari_telat sorted descending. GET /tenants/by-nomor/LPK-JMB-001 -> 200 (I Wayan Sudira). GET /tenants/by-nomor/LPK-JMB-999 -> 404. GET /activities?limit=200 -> 200 list, entries carry an 'actor' field."
+    },
+    {
+      "criterion": "Rekap Tunggakan, Pindai QR manual, dan Riwayat Aktivitas",
+      "name": "overdue-scanqr-riwayat",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/tunggakan table badge-telat-* values non-increasing (e.g. 112,82,51,20). /scan-qr manual input LPK-JMB-001 + Cari -> detail-penyewa shows hasil-nomor-id=LPK-JMB-001, hasil-nama contains 'Wayan Sudira'. /riwayat daftar-riwayat shows riwayat-actor-0 = 'pengelola'."
+    },
+    {
+      "criterion": "Peringatan password bawaan dan alur ganti password",
+      "name": "test_tscheck_change_password.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /auth/change-password (jimbaran2026 -> temp) -> 200 ok:true; GET /auth/me -> password_bawaan:false; reverted back to jimbaran2026 in the same test -> password_bawaan:true again. Negative: wrong current_password -> 401. Credential-access serialized via filelock across xdist workers to avoid cross-test races."
+    },
+    {
+      "criterion": "Peringatan password bawaan dan alur ganti password",
+      "name": "password-warning-and-change-flow",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "peringatan-password-bawaan visible on Dashboard and /pengaturan. Mismatched confirmation showed 'Konfirmasi password baru tidak cocok'. Valid change (jimbaran2026 -> tscheckBaru123) showed success toast, then reverted back to jimbaran2026 in the same run (confirmed working again via curl login 200 after the check)."
+    }
+  ]
+}
