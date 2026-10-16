@@ -4,13 +4,17 @@ from datetime import date, datetime, timedelta, timezone
 from typing import List
 
 from dateutil.relativedelta import relativedelta
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+import asyncio
+import uuid
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 
 from lib.activity import log_activity
 from lib.dates import today_iso
 from lib.db import db
 from lib.ratelimit import client_ip
 from lib.serialize import to_aware
+from lib.storage import APP_NAME, get_object, put_object
 from models.katalog import (
     LapakPublik, LapakUnit, LapakUnitCreate, LapakUnitOut, LapakUnitUpdate,
     Pendaftaran, PendaftaranCreate, TerimaInput,
@@ -53,12 +57,26 @@ async def _get_unit(unit_id: str) -> LapakUnit:
     return LapakUnit(**to_aware(doc, "created_at"))
 
 
+def _unit_dump(u: LapakUnit) -> dict:
+    """Dump termasuk field internal foto (dibutuhkan untuk menyusun model turunan)."""
+    return {**u.model_dump(exclude={"foto_url"}), "foto_path": u.foto_path, "foto_versi": u.foto_versi}
+
+
 # ---------- Publik (tanpa login) ----------
 
 @public_router.get("/lapak-kosong", response_model=List[LapakPublik])
 async def lapak_kosong():
     terisi = await _terisi_map()
     return [LapakPublik(**u.model_dump()) for u in await _units() if u.blok not in terisi]
+
+
+@public_router.get("/foto/{unit_id}")
+async def foto_lapak(unit_id: str):
+    unit = await _get_unit(unit_id)
+    if not unit.foto_path:
+        raise HTTPException(status_code=404, detail="Lapak belum punya foto")
+    data, ctype = await asyncio.to_thread(get_object, unit.foto_path)
+    return Response(content=data, media_type=ctype, headers={"Cache-Control": "public, max-age=86400"})
 
 
 @public_router.post("/pendaftaran", response_model=Pendaftaran, status_code=201)
@@ -85,7 +103,7 @@ async def daftar(input: PendaftaranCreate, request: Request):
 async def list_units():
     terisi = await _terisi_map()
     return [
-        LapakUnitOut(**u.model_dump(), status="terisi" if u.blok in terisi else "kosong",
+        LapakUnitOut(**_unit_dump(u), status="terisi" if u.blok in terisi else "kosong",
                      terisi_sampai=terisi.get(u.blok))
         for u in await _units()
     ]
@@ -116,6 +134,36 @@ async def update_unit(unit_id: str, input: LapakUnitUpdate, actor: str = Depends
     if changes:
         await db.lapak_units.update_one({"id": unit_id}, {"$set": changes})
         await log_activity(actor, "ubah", "lapak", unit_id, changes.get("blok", unit.blok))
+    return await _get_unit(unit_id)
+
+
+FOTO_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+FOTO_MAX = 5 * 1024 * 1024
+
+
+@admin_router.post("/lapak-unit/{unit_id}/foto", response_model=LapakUnit)
+async def upload_foto(unit_id: str, file: UploadFile = File(...), actor: str = Depends(require_session)):
+    unit = await _get_unit(unit_id)
+    ext = FOTO_TYPES.get(file.content_type or "")
+    if not ext:
+        raise HTTPException(status_code=415, detail="Foto harus JPG, PNG, atau WEBP")
+    data = await file.read()
+    if len(data) > FOTO_MAX:
+        raise HTTPException(status_code=413, detail="Ukuran foto maksimal 5 MB")
+    path = f"{APP_NAME}/lapak/{unit_id}/{uuid.uuid4()}.{ext}"
+    result = await asyncio.to_thread(put_object, path, data, file.content_type)
+    await db.lapak_units.update_one(
+        {"id": unit_id}, {"$set": {"foto_path": result["path"]}, "$inc": {"foto_versi": 1}}
+    )
+    await log_activity(actor, "ubah", "lapak", unit_id, unit.blok, "foto diperbarui")
+    return await _get_unit(unit_id)
+
+
+@admin_router.delete("/lapak-unit/{unit_id}/foto", response_model=LapakUnit)
+async def hapus_foto(unit_id: str, actor: str = Depends(require_session)):
+    unit = await _get_unit(unit_id)
+    await db.lapak_units.update_one({"id": unit_id}, {"$set": {"foto_path": None}})
+    await log_activity(actor, "ubah", "lapak", unit_id, unit.blok, "foto dihapus")
     return await _get_unit(unit_id)
 
 

@@ -81,7 +81,8 @@ async def csrf_dan_security_headers(request, call_next):
             )
         if request.headers.get("content-length") not in (None, "0"):
             ctype = (request.headers.get("content-type") or "").split(";")[0].strip().lower()
-            if ctype and ctype != "application/json":
+            foto_upload = ctype == "multipart/form-data" and request.url.path.endswith("/foto")
+            if ctype and ctype != "application/json" and not foto_upload:
                 return JSONResponse(
                     status_code=415,
                     content={"detail": "Content-Type harus application/json"},

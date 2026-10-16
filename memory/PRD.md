@@ -14,6 +14,8 @@ Aplikasi pendataan lapak & iuran pasar. (1) Penagih memindai QR penyewa → liha
 - 2026: Manajemen penagih, alur scan QR Sudah/Belum Bayar, nama penagih di pembayaran/Excel/kuitansi.
 - 2026-06: Halaman publik katalog lapak kosong + filter kategori, formulir daftar + tautan wa.me ke admin; menu admin "Pendaftaran & Katalog" (terima → penyewa baru otomatis + pendaftar lain ditolak, tolak, CRUD katalog lapak, status Kosong/Terisi); semua admin di /dashboard/*; perbaikan keamanan (rate limit anti-spoof XFF, kunci atomik terima, larang hapus/ganti nama lapak yang masih disewa). Diuji testing agent (iteration_2) + verifikasi ulang perbaikan.
 
+- 2026-06: Foto lapak — admin unggah 1 foto per lapak (Emergent Object Storage, JPG/PNG/WEBP maks 5 MB) di tab Katalog Lapak; publik melihat via `/api/publik/foto/{id}`; tanpa foto → foto ilustrasi per jenis (`FOTO_CONTOH` di frontend/src/config.ts). Diuji via curl + screenshot.
+
 ## Backlog
 - P1: Notifikasi otomatis (WA API) ke pendaftar saat diterima/ditolak
-- P2: Foto lapak di katalog publik; denah pasar
+- P2: Denah pasar interaktif

@@ -62,3 +62,20 @@ export const PESAN_WA = {
 export const KONTAK_ADMIN = {
   whatsapp: "6281234567890",
 };
+
+/**
+ * 5. FOTO CONTOH LAPAK (dipakai bila pengelola belum mengunggah foto)
+ * Kunci = jenis lapak (huruf kecil). Ganti URL-nya dengan foto lain bila perlu,
+ * atau unggah foto asli tiap lapak di menu Pendaftaran & Katalog → Katalog Lapak.
+ */
+export const FOTO_CONTOH: Record<string, string> = {
+  pangan: "https://images.unsplash.com/photo-1628575005417-6560070073f6?auto=format&fit=crop&w=800&q=70",
+  "sayur & buah": "https://images.unsplash.com/photo-1663154438428-60cdc204f99b?auto=format&fit=crop&w=800&q=70",
+  "daging & ikan": "https://images.unsplash.com/photo-1599033183537-54ff77f58f75?auto=format&fit=crop&w=800&q=70",
+  "pakaian & canang": "https://images.pexels.com/photos/40231849/pexels-photo-40231849.jpeg?auto=compress&cs=tinysrgb&w=800",
+  lainnya: "https://images.pexels.com/photos/37813600/pexels-photo-37813600.jpeg?auto=compress&cs=tinysrgb&w=800",
+};
+
+export function fotoLapak(foto_url: string | null | undefined, jenis: string): string {
+  return foto_url || FOTO_CONTOH[jenis.trim().toLowerCase()] || FOTO_CONTOH.lainnya;
+}

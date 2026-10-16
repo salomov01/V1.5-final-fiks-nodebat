@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 KategoriSewa = Literal["harian", "bulanan", "tahunan"]
 StatusLapak = Literal["kosong", "terisi"]
@@ -22,7 +22,14 @@ class LapakUnit(BaseModel):
     kategori: KategoriSewa
     tarif: int
     deskripsi: str = ""
+    foto_path: str | None = Field(default=None, exclude=True)
+    foto_versi: int = Field(default=0, exclude=True)
     created_at: datetime = Field(default_factory=aware_utcnow)
+
+    @computed_field
+    @property
+    def foto_url(self) -> str | None:
+        return f"/api/publik/foto/{self.id}?v={self.foto_versi}" if self.foto_path else None
 
 
 class LapakUnitOut(LapakUnit):
@@ -38,6 +45,7 @@ class LapakPublik(BaseModel):
     kategori: KategoriSewa
     tarif: int
     deskripsi: str
+    foto_url: str | None = None
 
 
 class LapakUnitCreate(BaseModel):

@@ -144,6 +144,7 @@ export interface LapakPublik {
   kategori: KategoriSewa;
   tarif: number;
   deskripsi: string;
+  foto_url: string | null;
 }
 
 export interface LapakUnit extends LapakPublik {

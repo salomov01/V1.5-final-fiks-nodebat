@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { errDetail, invalidateKatalog } from "@/components/PendaftaranList";
 import UnitFormDialog from "@/components/UnitFormDialog";
+import FotoCell from "@/components/FotoCell";
 
 export default function UnitLapakManager() {
   const qc = useQueryClient();
@@ -36,13 +37,14 @@ export default function UnitLapakManager() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Lapak</TableHead><TableHead>Jenis</TableHead><TableHead>Kategori</TableHead>
+              <TableHead>Foto</TableHead><TableHead>Lapak</TableHead><TableHead>Jenis</TableHead><TableHead>Kategori</TableHead>
               <TableHead>Tarif</TableHead><TableHead>Status</TableHead><TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {data?.map((u) => (
               <TableRow key={u.id} data-testid={`unit-row-${u.id}`}>
+                <TableCell><FotoCell unit={u} /></TableCell>
                 <TableCell className="font-medium">{u.blok}</TableCell>
                 <TableCell>{u.jenis || "-"}</TableCell>
                 <TableCell>{KATEGORI_LABEL[u.kategori]}</TableCell>
