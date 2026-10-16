@@ -20,13 +20,12 @@ def init_storage(force: bool = False) -> str:
     return storage_key
 
 
-def _call(method: str, path: str, **kwargs) -> requests.Response:
-    for attempt in range(2):
-        key = init_storage(force=attempt == 1)
-        headers = {"X-Storage-Key": key, **kwargs.pop("headers", {})}
-        resp = requests.request(method, f"{STORAGE_URL}/objects/{path}", headers=headers, **kwargs)
-        if resp.status_code != 404 or method == "GET":
-            break
+def _call(method: str, path: str, headers: dict | None = None, **kwargs) -> requests.Response:
+    url = f"{STORAGE_URL}/objects/{path}"
+    resp = requests.request(method, url, headers={"X-Storage-Key": init_storage(), **(headers or {})}, **kwargs)
+    # 404 pada upload = storage_key kedaluwarsa: minta key baru lalu ulangi sekali.
+    if resp.status_code == 404 and method != "GET":
+        resp = requests.request(method, url, headers={"X-Storage-Key": init_storage(force=True), **(headers or {})}, **kwargs)
     resp.raise_for_status()
     return resp
 

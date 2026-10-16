@@ -1,21 +1,37 @@
 """Katalog lapak publik, pendaftaran calon penyewa, konfirmasi admin, kedaluwarsa sewa.
 
 Run against public URL:  BACKEND_URL=$REACT_APP_BACKEND_URL pytest tests/test_katalog_pendaftaran.py
-Each test uses a unique X-Forwarded-For IP to avoid hitting the 5/hour public rate limit.
+The 5/hour/IP rate limit keys on the real client IP (spoofed X-Forwarded-For is ignored),
+so TEST_ registrations are wiped from Mongo before each test.
 """
 
-import random
+import secrets
 import uuid
 from datetime import date, timedelta
 
+import os
+
 import httpx
 import pytest
+from dotenv import load_dotenv
+from pymongo import MongoClient
 
 from tests.conftest import API_URL
 
 
-def _ip():
-    return f"10.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+_db = MongoClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]]
+
+
+@pytest.fixture(autouse=True)
+def _bersihkan_pendaftaran():
+    _db.pendaftaran.delete_many({"nama": {"$regex": "^TEST_"}})
+    yield
+    _db.pendaftaran.delete_many({"nama": {"$regex": "^TEST_"}})
+
+
+def _hp():
+    return f"0812{secrets.randbelow(10**8):08d}"
 
 
 def _pub():
@@ -36,10 +52,10 @@ def unit(auth_client):
     auth_client.delete(f"/lapak-unit/{u['id']}")
 
 
-def _daftar(lapak_id, ip=None, nama="TEST_Pendaftar"):
+def _daftar(lapak_id, nama="TEST_Pendaftar", no_hp=None):
     with _pub() as c:
-        return c.post("/publik/pendaftaran", json={"nama": nama, "no_hp": "081234567890", "lapak_id": lapak_id,
-                                                    "catatan": "uji"}, headers={"X-Forwarded-For": ip or _ip()})
+        return c.post("/publik/pendaftaran", json={"nama": nama, "no_hp": no_hp or _hp(), "lapak_id": lapak_id,
+                                                    "catatan": "uji"})
 
 
 # --- Public access & privacy ---
@@ -50,7 +66,7 @@ def test_public_lapak_kosong_no_auth_no_pii():
     data = r.json()
     assert isinstance(data, list)
     for item in data:
-        assert set(item.keys()) == {"id", "blok", "jenis", "kategori", "tarif", "deskripsi"}
+        assert set(item.keys()) == {"id", "blok", "jenis", "kategori", "tarif", "deskripsi", "foto_url"}
 
 
 @pytest.mark.parametrize("path", ["/lapak-unit", "/pendaftaran", "/tenants", "/payments"])
@@ -136,12 +152,21 @@ def test_terima_invalid_dates_422(auth_client, unit):
 def test_validation_errors():
     assert _daftar(str(uuid.uuid4())).status_code == 404
     with _pub() as c:
-        r = c.post("/publik/pendaftaran", json={"nama": "A", "no_hp": "abc", "lapak_id": "x"},
-                   headers={"X-Forwarded-For": _ip()})
+        r = c.post("/publik/pendaftaran", json={"nama": "A", "no_hp": "abc", "lapak_id": "x"})
     assert r.status_code == 422
 
 
-def test_rate_limit_429(unit):
-    ip = _ip()
-    codes = [_daftar(unit["id"], ip=ip).status_code for _ in range(6)]
+def test_duplicate_phone_same_stall_409(unit):
+    hp = _hp()
+    assert _daftar(unit["id"], no_hp=hp).status_code == 201
+    assert _daftar(unit["id"], no_hp=hp).status_code == 409
+
+
+@pytest.mark.skipif("localhost" in API_URL, reason="uvicorn --proxy-headers trusts 127.0.0.1; run against the public URL")
+def test_spoofed_xff_does_not_bypass_rate_limit(unit):
+    codes = []
+    with _pub() as c:
+        for i in range(6):
+            codes.append(c.post("/publik/pendaftaran", json={"nama": "TEST_Spoof", "no_hp": _hp(), "lapak_id": unit["id"]},
+                                headers={"X-Forwarded-For": f"10.0.0.{i + 1}"}).status_code)
     assert codes[:5] == [201] * 5 and codes[5] == 429, codes

@@ -24,7 +24,9 @@ def client_ip(request: Request) -> str:
     if fwd:
         hops = [h.strip() for h in fwd.split(",") if h.strip()]
         skip = int(os.environ.get("TRUSTED_PROXY_HOPS", "2"))
-        return hops[max(0, len(hops) - 1 - skip)]
+        if len(hops) > skip:
+            return hops[len(hops) - 1 - skip]
+        # Rantai lebih pendek dari jumlah proxy tepercaya = header dikirim klien sendiri.
     return request.client.host if request.client else "unknown"
 
 

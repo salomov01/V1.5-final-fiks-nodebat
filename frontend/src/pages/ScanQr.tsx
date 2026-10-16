@@ -101,8 +101,9 @@ export default function ScanQr() {
     try {
       await scanner.stop();
       scanner.clear();
-    } catch {
-      // scanner belum sempat start penuh — abaikan
+    } catch (err) {
+      // Wajar bila scanner belum sempat start penuh; dicatat untuk debugging.
+      console.debug("[scan-qr] stop scanner:", err);
     }
   };
 
@@ -121,7 +122,7 @@ export default function ScanQr() {
         const parsed = JSON.parse(raw) as { nomor_id?: unknown };
         if (typeof parsed?.nomor_id === "string") nomor = parsed.nomor_id;
       } catch {
-        // bukan JSON — pakai teks mentah
+        nomor = raw.trim(); // bukan JSON — pakai teks mentah
       }
       const found = await apiGet<Tenant>(`/tenants/by-nomor/${encodeURIComponent(nomor)}`);
       await stopScan();
