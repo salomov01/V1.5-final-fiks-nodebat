@@ -141,6 +141,14 @@ FOTO_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 FOTO_MAX = 5 * 1024 * 1024
 
 
+def _cek_magic(data: bytes, ext: str) -> bool:
+    if ext == "jpg":
+        return data[:3] == b"\xff\xd8\xff"
+    if ext == "png":
+        return data[:8] == b"\x89PNG\r\n\x1a\n"
+    return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+
+
 @admin_router.post("/lapak-unit/{unit_id}/foto", response_model=LapakUnit)
 async def upload_foto(unit_id: str, file: UploadFile = File(...), actor: str = Depends(require_session)):
     unit = await _get_unit(unit_id)
@@ -150,6 +158,8 @@ async def upload_foto(unit_id: str, file: UploadFile = File(...), actor: str = D
     data = await file.read()
     if len(data) > FOTO_MAX:
         raise HTTPException(status_code=413, detail="Ukuran foto maksimal 5 MB")
+    if not _cek_magic(data, ext):
+        raise HTTPException(status_code=415, detail="Isi file bukan gambar JPG, PNG, atau WEBP yang valid")
     path = f"{APP_NAME}/lapak/{unit_id}/{uuid.uuid4()}.{ext}"
     result = await asyncio.to_thread(put_object, path, data, file.content_type)
     await db.lapak_units.update_one(

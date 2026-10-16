@@ -16,6 +16,8 @@ Aplikasi pendataan lapak & iuran pasar. (1) Penagih memindai QR penyewa → liha
 
 - 2026-06: Foto lapak — admin unggah 1 foto per lapak (Emergent Object Storage, JPG/PNG/WEBP maks 5 MB) di tab Katalog Lapak; publik melihat via `/api/publik/foto/{id}`; tanpa foto → foto ilustrasi per jenis (`FOTO_CONTOH` di frontend/src/config.ts). Diuji via curl + screenshot.
 
+- 2026-06: Perbaikan dari code review — storage `_call` aman, catch kosong di ScanQr ditangani, `secrets` di tes, rate limit fallback anti-spoof, validasi magic-byte foto, tes katalog diperbarui. Diuji testing agent (iteration_3) + pytest 33 lulus.
+
 ## Backlog
 - P1: Notifikasi otomatis (WA API) ke pendaftar saat diterima/ditolak
 - P2: Denah pasar interaktif

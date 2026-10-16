@@ -1,0 +1,29 @@
+{
+  "summary": "Regression after code-review fixes. Backend: full suite `pytest tests/` 30 passed/1 skipped (spoof test skipped on localhost by design); against public URL test_katalog_pendaftaran.py 12/12 passed incl. duplicate phone 409 and spoofed X-Forwarded-For -> 6th request 429 (anti-spoof fix verified). New tests/test_lapak_foto.py 3/3 on localhost and public URL: upload JPG -> foto_url /api/publik/foto/{id}?v=N, public GET 200 image/jpeg (JPEG magic bytes), delete -> 404; no-login upload 401; text/plain 415. Frontend: katalog tab hidden file input upload -> thumbnail src ?v=1 + btn-hapus-foto shown, non-image toast 'Foto harus JPG, PNG, atau WEBP'; public card lapak-foto uses the uploaded photo (no 'Foto ilustrasi' label); hapus -> table 'contoh' and public card falls back to pexels illustration + lapak-foto-contoh. ScanQr: camera start/stop no crash, manual LPK-JMB-001 and JSON payload both resolve to I Wayan Sudira, unknown ID shows error toast, penagih select + Sudah Bayar -> LUNAS toast. Public registration: dialog -> daftar-sukses -> wa.me/6281234567890 link; same phone same stall -> 409 toast 'Nomor ini sudah mendaftar...'. All requested items PASS.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "DELETE /api/lapak-unit/{id}/foto and POST /foto (replace)", "issue": "Only clears foto_path in Mongo; old object stays in object storage (orphaned blobs). Acceptable if storage has no delete API, otherwise consider cleanup/soft-delete flag."},
+      {"endpoint": "POST /api/lapak-unit/{id}/foto", "issue": "Image type validated only from client-declared Content-Type; no magic-byte check (a non-image declared image/jpeg is stored and served publicly as image/jpeg). Low risk since admin-only."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_katalog_pendaftaran.py", "/app/backend/tests/test_lapak_foto.py", "/app/test_reports/pytest/pytest_iter3.xml"],
+  "action_items": ["None blocking. Optional: delete/replace photo should clean up storage objects; optionally verify image magic bytes on upload."],
+  "critical_code_review_comments": [
+    "storage._call fix is correct: resp always defined, single retry with forced new key on 404 for non-GET",
+    "ratelimit.client_ip fallback to request.client.host for short XFF chains verified effective via public URL",
+    "Pre-existing: QR 'Sudah Bayar' allows multiple LUNAS payments for the same periode (LPK-JMB-001 now has several 'Sewa Tahunan 2026 Lunas' rows) - consider idempotency per tenant+periode"
+  ],
+  "updated_files": ["/app/backend/tests/test_lapak_foto.py"],
+  "success_rate": {"backend": "100% (30+12+3 passed)", "frontend": "100% of requested flows"},
+  "test_credentials": "pengelola / jimbaran2026 - worked",
+  "seed_data_creation": "TEST_ units/photos removed (no TEST_ units, 0 units with foto_path, tenants=14), TEST_ pendaftaran deleted so rate limit is clear. One extra LUNAS payment recorded for LPK-JMB-001 by QR regression (left).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/ -q ; BACKEND_URL=$REACT_APP_BACKEND_URL python -m pytest tests/test_katalog_pendaftaran.py tests/test_lapak_foto.py -q -n0. Multipart upload with auth_client: strip Content-Type header (see _csrf_headers in test_lapak_foto.py). Rate limit keys on real IP; clean db.pendaftaran TEST_ records before UI registration tests."
+}
