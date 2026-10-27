@@ -148,7 +148,7 @@ export default function Dashboard() {
         data && (
           <>
             <DefaultPasswordAlert />
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" data-testid="stat-cards">
+            <div className={`mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 ${isSuper ? "xl:grid-cols-4" : "xl:grid-cols-3"}`} data-testid="stat-cards">
               <StatCard
                 icon={Store}
                 label="Penyewa Aktif"

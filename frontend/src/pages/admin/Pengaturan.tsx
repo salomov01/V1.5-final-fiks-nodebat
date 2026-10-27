@@ -16,7 +16,7 @@ export default function Pengaturan() {
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">Kelola akun pengelola {BRANDING.namaPasar}</p>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
         <DefaultPasswordAlert />
         <GantiPasswordCard />
         <Card data-testid="kartu-info-akun">

@@ -1,0 +1,43 @@
+{
+  "summary": "Full RBAC/new-spec regression. Backend: existing suite `pytest tests/ -q` 33 passed/1 skipped; new tests/test_rbac_roles.py 24/24 passed against PUBLIC URL (login by email, staff 403 on 14 forbidden endpoints, dashboard money null + overdue total null for staff, staff can create tenant/payment/scan-collect with penagih forced to 'Made Kasir' even when body sends other name, Excel row5 header exact 7 cols, info-pasar PUT/tutup/buka/422 + berita CRUD reflected publicly, user create/409 dup/deactivate -> existing session 401 + login 401/reactivate+reset pw/self-deactivate 409). Frontend: public '/', '/info-pasar', '/informasi-lapak', '/login' all render with required testids, sticky navbar, exact footer text, 3 images load; registration dialog -> daftar-sukses with wa.me link; mobile hamburger. Super Admin (email login): nav-info-pasar, stat-pemasukan, kartu-grafik, btn-ekspor-excel downloads xlsx, konfirmasi/tolak/hapus, lapak edit/hapus, katalog foto/edit/hapus, Pengaturan create staff / reset pw (prompt) / toggle aktif; Info Pasar admin edit mode buka->public BUKA, tutup->public TUTUP, pengumuman + berita add/edit/delete reflected publicly (reverted afterwards). Staff kasir1: no nav-info-pasar, /dashboard/info-pasar redirects, no money cards/graph, pembayaran no ekspor/konfirmasi/tolak/hapus/info-nilai-menunggu, lapak only tambah, tunggakan 'Disembunyikan', no kartu-kelola-akun, katalog/pendaftaran no edit/hapus/foto/terima/tolak; Scan QR penagih readonly 'Made Kasir', Sudah Bayar -> LUNAS toast with Made Kasir. Deactivated staff cannot log in via UI. One logic bug found (duplicate LUNAS on repeat scan).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/payments/scan-collect", "issue": "Not idempotent when current period already LUNAS: lookup only matches status 'menunggu', so pressing 'Sudah Bayar' twice (or re-scanning a paid tenant) inserts a second LUNAS payment for same periode -> double-counted revenue. Reproduced: two 'Oktober 2026' lunas rows for same tenant; seed tenant I Wayan Sudira already has 3x 'Sewa Tahunan 2026' Lunas. Fix: if a lunas payment exists for tenant+periode, return 409 (or return the existing one) instead of inserting."},
+      {"endpoint": "GET /api/activities, GET /api/dashboard/stats (recent_payments), GET /api/payments", "issue": "Staff still sees per-transaction amounts (activity details contain 'Rp ...'). Totals are hidden as required; only flagging in case spec means hide all money from staff."},
+      {"endpoint": "GET /api/laporan/pembayaran.xlsx", "issue": "Title rows still merged A1:J1/A2:J2/A3:J3 though table now has only 7 columns (A..G) - cosmetic."},
+      {"endpoint": "/api/users", "issue": "No DELETE endpoint; accounts can only be deactivated (test accounts must be removed via DB)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard (staff)", "issues": ["Only 3 stat cards render in a 4-column grid, leaving empty slot on right; 'Pembayaran Terbaru' full width - consider 3-col grid for staff"]},
+      {"screen": "Dashboard/Pengaturan (super admin)", "issues": ["'Risiko keamanan: password bawaan' banner always shown because the user-chosen password equals ADMIN_PASSWORD in .env - misleading for this client", "In Pengaturan the red banner card stretches to full row height (large empty pink box)"]},
+      {"screen": "Info Pasar admin / Pengaturan", "issues": ["Native <input type=time/date> and native <select> used instead of shadcn Select/Calendar; window.prompt for reset password and window.confirm for delete instead of shadcn dialogs"]},
+      {"screen": "Scan QR", "issues": ["Readonly 'Nama Penagih' input styled like an editable field (white bg) - use muted bg to signal readonly"]},
+      {"screen": "Home", "issues": ["Placeholder text visible: '(Teks contoh: ganti dengan sejarah resmi desa/pasar.)'"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_rbac_roles.py", "/app/test_reports/pytest/rbac.xml"],
+  "action_items": [
+    "Make /api/payments/scan-collect reject or reuse when a LUNAS payment already exists for tenant+periode (prevent duplicate revenue); optionally clean duplicate 'Sewa Tahunan 2026' lunas rows of LPK-JMB-001 created by earlier tests",
+    "Fix laporan merged title cells to A1:G1..A3:G3",
+    "Consider hiding/adjusting 'password bawaan' banner and fix its stretched card in Pengaturan",
+    "Optional: staff dashboard grid, readonly penagih styling, replace native prompt/confirm/select/date with shadcn components, remove '(Teks contoh...)' placeholders"
+  ],
+  "critical_code_review_comments": [
+    "scan_collect existing-lookup only for status 'menunggu' -> duplicate lunas (see above)",
+    "Password hashing is PBKDF2-SHA256 200k iterations (not bcrypt $2b$) - acceptable but differs from playbook; ensure_super_admin does not re-sync password from .env if changed (intentional since UI change-password exists)",
+    "CORS_ORIGINS wildcard -> allow_credentials disabled; same-origin calls work. CSRF middleware requires application/json bodies.",
+    "RBAC enforced server-side via require_super on all mutating/financial endpoints - verified"
+  ],
+  "updated_files": ["/app/backend/tests/test_rbac_roles.py", "/app/backend/tests/_mk_tenant.py"],
+  "success_rate": {"backend": "100% (57/57 tests; 1 logic bug found by exploratory test)", "frontend": "100% of requested flows"},
+  "test_credentials": "From /app/memory/test_credentials.md: pengelola / K3nnyb4yu200620! (email salomovbobo1@gmail.com), kasir1 / kasir12345. Super admin password NOT changed.",
+  "seed_data_creation": "None persisted. Created & removed: test_* user accounts (deleted via Mongo), TEST_ tenants/payments (deleted via API), TEST_ berita (deleted), TEST_UI pendaftaran (deleted), info_pasar reverted to 05:00-13:00 otomatis 'Pasar tutup saat Hari Raya Nyepi.'; db.login_attempts cleared.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/ -q ; BACKEND_URL=$REACT_APP_BACKEND_URL python -m pytest tests/test_rbac_roles.py -q -n0. test_rbac_roles.test_user_lifecycle leaves a deactivated test_xxxxxx user (no DELETE endpoint) - remove via db.users.delete_many({username:/^test_/}). tests/_mk_tenant.py is a manual helper (create|delete <id>) for UI scan tests. Pengaturan reset password uses window.prompt -> handle page dialog in Playwright."
+}

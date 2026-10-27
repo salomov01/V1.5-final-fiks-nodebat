@@ -210,8 +210,12 @@ async def scan_collect(input: ScanCollectInput, me: Principal = Depends(get_prin
     )
 
     existing = await db.payments.find_one(
-        {"tenant_id": tenant["id"], "periode": periode, "status": "menunggu"}
+        {"tenant_id": tenant["id"], "periode": periode, "status": {"$in": ["menunggu", "lunas"]}},
+        sort=[("status", -1)],  # "menunggu" > "lunas" secara abjad -> tagihan menunggu didahulukan
     )
+    # Periode ini sudah LUNAS -> tolak agar pemasukan tidak tercatat ganda.
+    if existing and existing["status"] == "lunas":
+        raise HTTPException(status_code=409, detail=f"{tenant['nama_lengkap']} sudah LUNAS untuk periode {periode}")
     if existing:
         updates = {"penagih": penagih, "catatan": catatan}
         if input.sudah_bayar:

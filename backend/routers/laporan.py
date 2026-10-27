@@ -90,13 +90,13 @@ async def export_pembayaran_xlsx(
     ws = wb.active
     ws.title = "Rekap Pembayaran"
 
-    ws.merge_cells("A1:J1")
+    ws.merge_cells("A1:G1")
     ws["A1"] = JUDUL_LAPORAN_EXCEL
     ws["A1"].font = Font(bold=True, size=13)
-    ws.merge_cells("A2:J2")
+    ws.merge_cells("A2:G2")
     ws["A2"] = f"Filter: {filter_text}"
     ws["A2"].font = Font(size=10, bold=True, color="B45309")
-    ws.merge_cells("A3:J3")
+    ws.merge_cells("A3:G3")
     ws["A3"] = f"Diekspor: {today_iso()} ({LABEL_ZONA_WAKTU}) • {len(payments)} transaksi"
     ws["A3"].font = Font(size=10, color="64748B")
 

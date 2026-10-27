@@ -73,8 +73,8 @@ async def ensure_super_admin() -> None:
 
 
 def _pakai_password_bawaan(user: dict) -> bool:
-    bawaan = os.environ.get("ADMIN_PASSWORD", "")
-    return bool(bawaan) and user["role"] == SUPER_ADMIN and verify_password(bawaan, user["salt"], user["password_hash"])
+    # Peringatan hanya bila Super Admin masih memakai password contoh lama dari repo.
+    return user["role"] == SUPER_ADMIN and verify_password("jimbaran2026", user["salt"], user["password_hash"])
 
 
 def _principal(user: dict) -> Principal:

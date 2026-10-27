@@ -336,7 +336,7 @@ export default function ScanQr() {
 
                   <div className="mt-3">
                     <label htmlFor="scan-penagih" className="text-xs font-medium text-brand">Nama Penagih</label>
-                    <Input id="scan-penagih" readOnly value={penagih} className="mt-1 bg-white" data-testid="input-penagih-scan" />
+                    <Input id="scan-penagih" readOnly value={penagih} className="mt-1 cursor-not-allowed bg-slate-100 font-semibold text-slate-700" data-testid="input-penagih-scan" />
                   </div>
 
                   <div className="mt-4 grid grid-cols-2 gap-2">

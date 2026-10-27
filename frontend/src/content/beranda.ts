@@ -15,7 +15,7 @@ export const SEJARAH_DESA = {
   gambar: sejarahDesaImg,
   paragraf: [
     "Desa Adat Jimbaran merupakan salah satu desa adat tua di Kabupaten Badung, Bali, yang tumbuh di tepi teluk dan dikenal dengan kehidupan nelayan serta tradisi keagamaannya yang kuat.",
-    "Nama Jimbaran dipercaya berasal dari kata 'jimbar' yang berarti luas — menggambarkan wilayah pesisir yang lapang. (Teks contoh: ganti dengan sejarah resmi desa.)",
+    "Nama Jimbaran dipercaya berasal dari kata 'jimbar' yang berarti luas — menggambarkan wilayah pesisir yang lapang.",
     "Hingga kini, kehidupan krama desa diatur oleh awig-awig dan dipimpin oleh Bendesa Adat, dengan pura-pura kahyangan desa sebagai pusat kegiatan spiritual.",
   ],
 };
@@ -25,7 +25,7 @@ export const SEJARAH_PASAR = {
   gambar: sejarahPasarImg,
   paragraf: [
     "Pasar Adat Jimbaran berawal dari tempat berkumpulnya krama desa untuk menukar hasil laut, kebun, dan perlengkapan upacara setiap pagi.",
-    "Seiring waktu, pasar dikelola oleh desa adat agar manfaatnya kembali ke masyarakat — mulai dari pemeliharaan pura hingga kegiatan sosial. (Teks contoh: ganti dengan sejarah resmi pasar.)",
+    "Seiring waktu, pasar dikelola oleh desa adat agar manfaatnya kembali ke masyarakat — mulai dari pemeliharaan pura hingga kegiatan sosial.",
     "Kini pasar menampung pedagang harian, bulanan, dan tahunan, dengan pendataan lapak serta iuran yang tercatat secara digital.",
   ],
 };
