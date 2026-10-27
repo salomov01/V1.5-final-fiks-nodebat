@@ -10,7 +10,7 @@ from lib.db import db
 from lib.serialize import to_aware
 from models.dashboard import DashboardStats, RevenuePoint
 from models.payment import Payment
-from routers.auth import require_session
+from routers.auth import SUPER_ADMIN, Principal, get_principal, require_session
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"], dependencies=[Depends(require_session)])
 
@@ -18,7 +18,7 @@ BULAN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "
 
 
 @router.get("/stats", response_model=DashboardStats)
-async def dashboard_stats():
+async def dashboard_stats(me: Principal = Depends(get_principal)):
     zone = ZoneInfo(os.environ.get("APP_TZ", "UTC"))
     now_local = datetime.now(zone)
 
@@ -64,6 +64,8 @@ async def dashboard_stats():
     recent_docs = await db.payments.find().sort("created_at", -1).limit(6).to_list(6)
     recent = [Payment(**to_aware(d, "created_at", "confirmed_at")) for d in recent_docs]
 
+    if me.role != SUPER_ADMIN:
+        nilai_menunggu = pemasukan_bulan_ini = pemasukan_bulan_lalu = revenue_6m = None
     return DashboardStats(
         total_penyewa=total_penyewa,
         penyewa_aktif=penyewa_aktif,

@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Landmark, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
+import logoDesa from "@/assets/logo-desa.svg";
+import PublicLayout from "@/components/layout/PublicLayout";
 import { BRANDING } from "@/config";
-import { ApiError, apiGet, apiPost } from "@/lib/api";
-import { beginSession } from "@/lib/session";
-import type { MeOutput } from "@/lib/types";
+import { ApiError, apiGet, apiPost } from "@/services/api";
+import { beginSession } from "@/services/session";
+import type { MeOutput } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,13 +53,12 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background p-4">
+    <PublicLayout>
+    <div className="flex items-center justify-center p-4 py-16">
       <Card className="w-full max-w-md" data-testid="kartu-login">
         <CardContent className="flex flex-col items-center gap-6 py-8">
           <div className="flex flex-col items-center gap-3 text-center">
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-amber-500 text-slate-900">
-              <Landmark className="size-6" />
-            </span>
+            <img src={logoDesa} alt="" className="size-14" />
             <div>
               <h1 className="text-xl font-bold tracking-tight text-foreground" data-testid="judul-login">
                 {BRANDING.namaDesa}
@@ -76,7 +77,7 @@ export default function Login() {
             }}
           >
             <div className="grid gap-2">
-              <Label htmlFor="login-username">Username</Label>
+              <Label htmlFor="login-username">Username atau Email</Label>
               <Input
                 id="login-username"
                 data-testid="input-username"
@@ -106,5 +107,6 @@ export default function Login() {
         </CardContent>
       </Card>
     </div>
+    </PublicLayout>
   );
 }

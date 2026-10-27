@@ -7,6 +7,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    /* Warna aksen utama Desa Adat Jimbaran (hijau tua). Ubah di sini untuk mengganti tema. */
+    --color-brand: #1E4E42;
+    --color-brand-50: #EEF5F2;
+    --color-brand-100: #D5E7DF;
+    --color-brand-200: #A9CDBF;
+    --color-brand-700: #163A31;
     --font-heading: var(--font-sans);
     --font-sans: 'Plus Jakarta Sans Variable', sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -51,15 +57,15 @@
 }
 
 :root {
-    /* Palet: slate navy + aksen emas (amber) khas panel admin desa */
+    /* Palet: putih/off-white + teks slate-900 + aksen hijau tua #1E4E42 */
     --background: oklch(0.984 0.003 247.858);      /* slate-50 */
     --foreground: oklch(0.208 0.042 265.755);      /* slate-900 */
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.208 0.042 265.755);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.208 0.042 265.755);
-    --primary: oklch(0.208 0.042 265.755);         /* slate-900 — tombol utama */
-    --primary-foreground: oklch(0.984 0.003 247.858);
+    --primary: #1E4E42;         /* slate-900 — tombol utama */
+    --primary-foreground: #FFFFFF;
     --secondary: oklch(0.968 0.007 247.896);       /* slate-100 */
     --secondary-foreground: oklch(0.208 0.042 265.755);
     --muted: oklch(0.968 0.007 247.896);
@@ -69,21 +75,21 @@
     --destructive: oklch(0.577 0.245 27.325);      /* red-600 */
     --border: oklch(0.929 0.013 255.508);          /* slate-200 */
     --input: oklch(0.929 0.013 255.508);
-    --ring: oklch(0.769 0.188 70.08);              /* amber-500 */
-    --chart-1: oklch(0.666 0.179 58.318);          /* amber-600 */
+    --ring: #1E4E42;              /* amber-500 */
+    --chart-1: #1E4E42;          /* amber-600 */
     --chart-2: oklch(0.596 0.145 163.225);         /* emerald-600 */
     --chart-3: oklch(0.546 0.245 262.881);         /* blue-600 */
     --chart-4: oklch(0.588 0.158 241.966);         /* sky-600 */
     --chart-5: oklch(0.372 0.044 257.287);         /* slate-700 */
     --radius: 0.625rem;
-    --sidebar: oklch(0.208 0.042 265.755);         /* slate-900 */
-    --sidebar-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-primary: oklch(0.769 0.188 70.08);   /* amber-500 */
-    --sidebar-primary-foreground: oklch(0.129 0.042 264.695);
-    --sidebar-accent: oklch(0.279 0.041 260.031);  /* slate-800 */
-    --sidebar-accent-foreground: oklch(0.828 0.189 84.429); /* amber-400 */
-    --sidebar-border: oklch(0.279 0.041 260.031);
-    --sidebar-ring: oklch(0.769 0.188 70.08);
+    --sidebar: #FFFFFF;         /* slate-900 */
+    --sidebar-foreground: oklch(0.208 0.042 265.755);
+    --sidebar-primary: #1E4E42;   /* amber-500 */
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #EEF5F2;  /* slate-800 */
+    --sidebar-accent-foreground: #1E4E42; /* amber-400 */
+    --sidebar-border: oklch(0.929 0.013 255.508);
+    --sidebar-ring: #1E4E42;
 }
 
 .dark {

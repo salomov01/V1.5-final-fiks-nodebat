@@ -1,12 +1,14 @@
-"""Login pengelola, sesi httpOnly cookie & ganti password — semua di /api/auth/*.
+"""Login multi-akun (Super Admin & Staff), sesi httpOnly cookie, ganti password — /api/auth/*.
 
-Tidak ada token di JSON: cookie httpOnly `siplap_session` satu-satunya bukti sesi.
-Kredensial tersimpan di koleksi `admins` (hash pbkdf2), di-bootstrap sekali dari
-backend/.env (ADMIN_USERNAME / ADMIN_PASSWORD) agar password bisa diganti dari UI.
+Peran:
+- super_admin (Admin Tingkat 2): akses penuh.
+- staff (Admin Tingkat 1): boleh lihat & input baru; tidak boleh ubah/hapus, ekspor, atau melihat total uang.
+Super Admin di-bootstrap dari backend/.env (ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD).
 """
 
 import os
 import secrets
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
@@ -21,18 +23,25 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 COOKIE_NAME = "siplap_session"
 SESSION_TTL_SECONDS = 7 * 24 * 3600  # 7 hari
-ADMIN_DOC_ID = "admin"
+SUPER_ADMIN = "super_admin"
+STAFF = "staff"
+
+
+class Principal(BaseModel):
+    """Identitas pengguna yang login — selalu dibaca ulang dari DB tiap request."""
+    id: str
+    nama: str
+    username: str
+    role: str
 
 
 class LoginInput(BaseModel):
-    username: str
+    username: str  # boleh username atau email
     password: str
 
 
-class MeOutput(BaseModel):
-    username: str
-    # true selama password masih nilai bawaan dari .env (belum pernah diganti).
-    # Dipakai frontend untuk menampilkan peringatan keamanan.
+class MeOutput(Principal):
+    # true selama password Super Admin masih nilai bawaan dari .env.
     password_bawaan: bool = False
 
 
@@ -45,127 +54,106 @@ def _secure(request: Request) -> bool:
     return request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
 
 
-async def _get_admin() -> dict:
-    """Ambil dokumen admin; bootstrap dari .env pada pemakaian pertama."""
-    admin = await db.admins.find_one({"_id": ADMIN_DOC_ID})
-    if admin:
-        return admin
-    username = os.environ.get("ADMIN_USERNAME", "pengelola")
-    password = os.environ.get("ADMIN_PASSWORD", "")
-    salt, digest = hash_password(password)
-    admin = {
-        "_id": ADMIN_DOC_ID,
-        "username": username,
+async def ensure_super_admin() -> None:
+    """Buat akun Super Admin dari .env bila belum ada satu pun."""
+    if await db.users.find_one({"role": SUPER_ADMIN}):
+        return
+    salt, digest = hash_password(os.environ["ADMIN_PASSWORD"])
+    await db.users.insert_one({
+        "id": str(uuid.uuid4()),
+        "nama": os.environ.get("ADMIN_NAMA", "Super Admin"),
+        "username": os.environ["ADMIN_USERNAME"].strip().lower(),
+        "email": os.environ.get("ADMIN_EMAIL", "").strip().lower(),
+        "role": SUPER_ADMIN,
+        "aktif": True,
         "salt": salt,
         "password_hash": digest,
-        "updated_at": datetime.now(timezone.utc),
-    }
-    await db.admins.insert_one(admin)
-    return admin
+        "created_at": datetime.now(timezone.utc),
+    })
 
 
-def _pakai_password_bawaan(admin: dict) -> bool:
-    """True bila password aktif masih sama dengan ADMIN_PASSWORD di .env.
-
-    Dihitung ulang setiap kali (bukan flag tersimpan) supaya tetap benar walau
-    password pernah diganti lalu dikembalikan ke nilai bawaan.
-    """
+def _pakai_password_bawaan(user: dict) -> bool:
     bawaan = os.environ.get("ADMIN_PASSWORD", "")
-    if not bawaan:
-        return False
-    return verify_password(bawaan, admin["salt"], admin["password_hash"])
+    return bool(bawaan) and user["role"] == SUPER_ADMIN and verify_password(bawaan, user["salt"], user["password_hash"])
 
 
-async def require_session(session_token: str | None = Cookie(None, alias=COOKIE_NAME)) -> str:
-    """Dependency proteksi -> username pengelola (dipakai sebagai actor log aktivitas)."""
-    if not session_token:
+def _principal(user: dict) -> Principal:
+    return Principal(id=user["id"], nama=user["nama"], username=user["username"], role=user["role"])
+
+
+async def _user_dari_token(token: str | None) -> dict:
+    if not token:
         raise HTTPException(status_code=401, detail="Sesi berakhir — silakan login kembali")
-    session = await db.sessions.find_one({"token": session_token})
-    if not session:
+    session = await db.sessions.find_one({"token": token})
+    user = await db.users.find_one({"id": session.get("user_id")}) if session else None
+    if not user or not user.get("aktif", True):
         raise HTTPException(status_code=401, detail="Sesi tidak valid — silakan login kembali")
-    return session["username"]
+    return user
+
+
+async def get_principal(session_token: str | None = Cookie(None, alias=COOKIE_NAME)) -> Principal:
+    return _principal(await _user_dari_token(session_token))
+
+
+async def require_session(principal: Principal = Depends(get_principal)) -> str:
+    """Dependency proteksi -> username (dipakai sebagai actor log aktivitas)."""
+    return principal.username
+
+
+async def require_super(principal: Principal = Depends(get_principal)) -> str:
+    """Hanya Super Admin (Admin Tingkat 2). Staff -> 403."""
+    if principal.role != SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Hanya Super Admin yang boleh melakukan aksi ini")
+    return principal.username
 
 
 @router.post("/login", response_model=MeOutput)
 async def login(input: LoginInput, request: Request, response: Response):
-    username_input = input.username.strip()
-    # Anti brute-force: tolak lebih awal bila sudah terlalu banyak gagal.
-    await guard("login", username_input, request)
+    ident = input.username.strip().lower()
+    await guard("login", ident, request)  # anti brute-force
+    await ensure_super_admin()
 
-    admin = await _get_admin()
-    user_ok = secrets.compare_digest(username_input, admin["username"])
-    pass_ok = verify_password(input.password, admin["salt"], admin["password_hash"])
-    if not (user_ok and pass_ok):
-        await catat_gagal("login", username_input, request)
+    user = await db.users.find_one({"$or": [{"username": ident}, {"email": ident}]}) if ident else None
+    ok = bool(user) and user.get("aktif", True) and verify_password(input.password, user["salt"], user["password_hash"])
+    if not ok:
+        await catat_gagal("login", ident, request)
         raise HTTPException(status_code=401, detail="Username atau password salah")
 
-    await bersihkan("login", username_input, request)
+    await bersihkan("login", ident, request)
     token = secrets.token_hex(32)
     await db.sessions.insert_one({
-        "token": token,
-        "username": admin["username"],
-        "created_at": datetime.now(timezone.utc),
+        "token": token, "user_id": user["id"], "username": user["username"], "created_at": datetime.now(timezone.utc),
     })
     response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        max_age=SESSION_TTL_SECONDS,
-        httponly=True,
-        samesite="lax",
-        secure=_secure(request),
-        path="/",
+        key=COOKIE_NAME, value=token, max_age=SESSION_TTL_SECONDS, httponly=True,
+        samesite="lax", secure=_secure(request), path="/",
     )
-    return MeOutput(
-        username=admin["username"],
-        password_bawaan=_pakai_password_bawaan(admin),
-    )
+    return MeOutput(**_principal(user).model_dump(), password_bawaan=_pakai_password_bawaan(user))
 
 
 @router.get("/me", response_model=MeOutput)
 async def me(request: Request):
-    token = request.cookies.get(COOKIE_NAME)
-    if not token:
-        raise HTTPException(status_code=401, detail="Belum login")
-    session = await db.sessions.find_one({"token": token})
-    if not session:
-        raise HTTPException(status_code=401, detail="Sesi tidak valid — silakan login kembali")
-    admin = await _get_admin()
-    return MeOutput(
-        username=session["username"],
-        password_bawaan=_pakai_password_bawaan(admin),
-    )
+    user = await _user_dari_token(request.cookies.get(COOKIE_NAME))
+    return MeOutput(**_principal(user).model_dump(), password_bawaan=_pakai_password_bawaan(user))
 
 
 @router.post("/change-password")
-async def change_password(
-    input: ChangePasswordInput,
-    request: Request,
-    actor: str = Depends(require_session),
-):
-    # Anti brute-force juga untuk percobaan menebak password saat ini.
-    await guard("ganti-password", actor, request)
-
-    admin = await _get_admin()
-    if not verify_password(input.current_password, admin["salt"], admin["password_hash"]):
-        await catat_gagal("ganti-password", actor, request)
+async def change_password(input: ChangePasswordInput, request: Request, principal: Principal = Depends(get_principal)):
+    await guard("ganti-password", principal.username, request)
+    user = await db.users.find_one({"id": principal.id})
+    if not verify_password(input.current_password, user["salt"], user["password_hash"]):
+        await catat_gagal("ganti-password", principal.username, request)
         raise HTTPException(status_code=401, detail="Password saat ini salah")
     if input.current_password == input.new_password:
         raise HTTPException(status_code=422, detail="Password baru harus berbeda dari password lama")
 
-    await bersihkan("ganti-password", actor, request)
+    await bersihkan("ganti-password", principal.username, request)
     salt, digest = hash_password(input.new_password)
-    await db.admins.update_one(
-        {"_id": ADMIN_DOC_ID},
-        {"$set": {
-            "salt": salt,
-            "password_hash": digest,
-            "updated_at": datetime.now(timezone.utc),
-        }},
-    )
-    # Cabut semua sesi lain; sesi saat ini dipertahankan agar pengelola tidak terlempar keluar.
+    await db.users.update_one({"id": principal.id}, {"$set": {"salt": salt, "password_hash": digest}})
+    # Cabut sesi lain milik akun ini; sesi saat ini dipertahankan.
     current = request.cookies.get(COOKIE_NAME)
-    await db.sessions.delete_many({"token": {"$ne": current}})
-    await log_activity(actor, "ubah", "akun", ADMIN_DOC_ID, f"Password {actor}", "password diganti")
+    await db.sessions.delete_many({"user_id": principal.id, "token": {"$ne": current}})
+    await log_activity(principal.username, "ubah", "akun", principal.id, f"Password {principal.username}", "password diganti")
     return {"ok": True}
 
 

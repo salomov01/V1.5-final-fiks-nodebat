@@ -15,9 +15,9 @@ from lib.db import db
 from lib.dates import today_iso
 from lib.serialize import to_aware
 from models.payment import Payment
-from routers.auth import require_session
+from routers.auth import require_super
 
-router = APIRouter(prefix="/laporan", tags=["laporan"], dependencies=[Depends(require_session)])
+router = APIRouter(prefix="/laporan", tags=["laporan"], dependencies=[Depends(require_super)])
 
 STATUS_LABEL = {"menunggu": "Menunggu", "lunas": "Lunas", "ditolak": "Ditolak"}
 KATEGORI_LABEL = {"harian": "Harian", "bulanan": "Bulanan", "tahunan": "Tahunan"}
@@ -100,11 +100,9 @@ async def export_pembayaran_xlsx(
     ws["A3"] = f"Diekspor: {today_iso()} ({LABEL_ZONA_WAKTU}) • {len(payments)} transaksi"
     ws["A3"].font = Font(size=10, color="64748B")
 
-    headers = [
-        "No", "Nomor ID", "Nama Penyewa", "Periode", "Jumlah (Rp)",
-        "Metode", "Status", "Penagih", "Tanggal Catat", "Tgl Konfirmasi",
-    ]
-    header_fill = PatternFill("solid", fgColor="0F172A")
+    # Urutan kolom sesuai permintaan: Nama, ID, Periode Sewa, Harga/Jumlah, Penagih, Tanggal, Status
+    headers = ["Nama", "ID", "Periode Sewa", "Harga/Jumlah (Rp)", "Penagih", "Tanggal", "Status"]
+    header_fill = PatternFill("solid", fgColor="1E4E42")
     for col, title in enumerate(headers, start=1):
         cell = ws.cell(row=5, column=col, value=title)
         cell.font = Font(bold=True, color="FFFFFF")
@@ -113,17 +111,14 @@ async def export_pembayaran_xlsx(
     total_lunas = 0
     total_menunggu = 0
     row_num = 6
-    for idx, p in enumerate(payments, start=1):
-        ws.cell(row=row_num, column=1, value=idx)
-        ws.cell(row=row_num, column=2, value=_aman_excel(p.nomor_id))
-        ws.cell(row=row_num, column=3, value=_aman_excel(p.nama_lengkap))
-        ws.cell(row=row_num, column=4, value=_aman_excel(p.periode))
-        ws.cell(row=row_num, column=5, value=p.jumlah)
-        ws.cell(row=row_num, column=6, value=p.metode.capitalize())
-        ws.cell(row=row_num, column=7, value=STATUS_LABEL.get(p.status, p.status))
-        ws.cell(row=row_num, column=8, value=_aman_excel(p.penagih))
-        ws.cell(row=row_num, column=9, value=_fmt_dt(p.created_at))
-        ws.cell(row=row_num, column=10, value=_fmt_dt(p.confirmed_at))
+    for p in payments:
+        tanggal = p.confirmed_at if p.status == "lunas" and p.confirmed_at else p.created_at
+        row = [
+            _aman_excel(p.nama_lengkap), _aman_excel(p.nomor_id), _aman_excel(p.periode), p.jumlah,
+            _aman_excel(p.penagih) or "-", _fmt_dt(tanggal), STATUS_LABEL.get(p.status, p.status),
+        ]
+        for col, value in enumerate(row, start=1):
+            ws.cell(row=row_num, column=col, value=value)
         if p.status == "lunas":
             total_lunas += p.jumlah
         elif p.status == "menunggu":
@@ -134,12 +129,12 @@ async def export_pembayaran_xlsx(
         ws.cell(row=row_num, column=1, value="Tidak ada transaksi pada filter ini").font = Font(italic=True)
         row_num += 1
 
-    ws.cell(row=row_num + 1, column=4, value="Total Lunas").font = Font(bold=True)
-    ws.cell(row=row_num + 1, column=5, value=total_lunas).font = Font(bold=True)
-    ws.cell(row=row_num + 2, column=4, value="Total Menunggu Konfirmasi").font = Font(bold=True)
-    ws.cell(row=row_num + 2, column=5, value=total_menunggu).font = Font(bold=True)
+    ws.cell(row=row_num + 1, column=3, value="Total Lunas").font = Font(bold=True)
+    ws.cell(row=row_num + 1, column=4, value=total_lunas).font = Font(bold=True)
+    ws.cell(row=row_num + 2, column=3, value="Total Menunggu Konfirmasi").font = Font(bold=True)
+    ws.cell(row=row_num + 2, column=4, value=total_menunggu).font = Font(bold=True)
 
-    for col, width in enumerate([5, 14, 28, 24, 14, 10, 12, 20, 18, 18], start=1):
+    for col, width in enumerate([28, 14, 24, 18, 20, 18, 12], start=1):
         ws.column_dimensions[chr(64 + col)].width = width
 
     buffer = io.BytesIO()

@@ -47,8 +47,11 @@ async def aclient():
 
 # --- app-specific fixtures below this line ---
 
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "pengelola")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "jimbaran2026")
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+ADMIN_USERNAME = os.environ["ADMIN_USERNAME"]
+ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 
 # Serializes access to the single shared admin credential across xdist workers.
 # test_tscheck_change_password.py holds this for its whole change->verify->revert

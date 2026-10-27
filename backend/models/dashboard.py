@@ -16,10 +16,11 @@ class DashboardStats(BaseModel):
     total_penyewa: int
     penyewa_aktif: int
     tagihan_menunggu: int
-    nilai_menunggu: int
-    pemasukan_bulan_ini: int
-    pemasukan_bulan_lalu: int
+    # Field uang bernilai None untuk Staff (Admin Tingkat 1) — total disembunyikan di server.
+    nilai_menunggu: int | None
+    pemasukan_bulan_ini: int | None
+    pemasukan_bulan_lalu: int | None
     by_kategori: dict[str, int]  # penyewa aktif per kategori
-    revenue_6m: list[RevenuePoint]
+    revenue_6m: list[RevenuePoint] | None
     recent_payments: list[Payment]
     generated_at: datetime

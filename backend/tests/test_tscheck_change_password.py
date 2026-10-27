@@ -8,7 +8,7 @@ required negative case: wrong current-password is rejected 401.
 
 import os
 
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "jimbaran2026")
+from tests.conftest import ADMIN_PASSWORD
 NEW_PASSWORD_TMP = "tscheck-temp-pw-12345"
 
 

@@ -23,7 +23,7 @@ from models.payment import (
     PaymentCreate,
     ScanCollectInput,
 )
-from routers.auth import require_session
+from routers.auth import SUPER_ADMIN, Principal, get_principal, require_session, require_super
 
 router = APIRouter(prefix="/payments", tags=["payments"], dependencies=[Depends(require_session)])
 
@@ -48,7 +48,7 @@ def _days_between(iso_awal: str, iso_akhir: str) -> int:
 
 # Rute statis didefinisikan sebelum rute ber-parameter agar tidak tertangkap /{id}.
 @router.get("/overdue", response_model=OverdueSummary)
-async def list_overdue():
+async def list_overdue(me: Principal = Depends(get_principal)):
     """Rekap tunggakan: tagihan `menunggu` yang jatuh temponya sudah lewat hari ini (WITA)."""
     hari_ini = today_iso()
     docs = await db.payments.find({"status": "menunggu"}).to_list(2000)
@@ -74,7 +74,7 @@ async def list_overdue():
     return OverdueSummary(
         periode_hari_ini=hari_ini,
         jumlah_penyewa=len({i.tenant_id for i in items}),
-        total_tunggakan=sum(i.jumlah for i in items),
+        total_tunggakan=sum(i.jumlah for i in items) if me.role == SUPER_ADMIN else None,
         telat_terlama=items[0].hari_telat if items else 0,
         items=items,
     )
@@ -141,7 +141,8 @@ async def list_payments(
 
 
 @router.post("", response_model=Payment, status_code=201)
-async def create_payment(input: PaymentCreate, actor: str = Depends(require_session)):
+async def create_payment(input: PaymentCreate, me: Principal = Depends(get_principal)):
+    actor = me.username
     tenant = await db.tenants.find_one({"id": input.tenant_id})
     if not tenant:
         raise HTTPException(status_code=404, detail="Penyewa tidak ditemukan")
@@ -155,7 +156,7 @@ async def create_payment(input: PaymentCreate, actor: str = Depends(require_sess
         status="menunggu",
         jatuh_tempo=input.jatuh_tempo,
         catatan=input.catatan,
-        penagih=input.penagih,
+        penagih=me.nama,  # otomatis = akun yang login
         created_at=aware_utcnow(),
     )
     await db.payments.insert_one(payment.model_dump())
@@ -181,7 +182,7 @@ def _periode_untuk(tenant: dict) -> str:
 
 
 @router.post("/scan-collect", response_model=Payment, status_code=201)
-async def scan_collect(input: ScanCollectInput, actor: str = Depends(require_session)):
+async def scan_collect(input: ScanCollectInput, me: Principal = Depends(get_principal)):
     """Penagihan dari hasil scan QR oleh penagih di lapangan.
 
     - Sudah bayar  -> pembayaran periode berjalan langsung LUNAS (confirmed).
@@ -193,7 +194,9 @@ async def scan_collect(input: ScanCollectInput, actor: str = Depends(require_ses
     if not tenant:
         raise HTTPException(status_code=404, detail="Penyewa tidak ditemukan")
 
-    penagih = input.penagih.strip()
+    # Nama penagih selalu = akun yang sedang login (tidak bisa diisi dari klien).
+    penagih = me.nama
+    actor = me.username
     periode = _periode_untuk(tenant)
     hari_ini = today_iso()
     now = aware_utcnow()
@@ -245,7 +248,7 @@ async def scan_collect(input: ScanCollectInput, actor: str = Depends(require_ses
 
 
 @router.patch("/{id}/confirm", response_model=Payment)
-async def confirm_payment(id: str, actor: str = Depends(require_session)):
+async def confirm_payment(id: str, actor: str = Depends(require_super)):
     # Hanya tagihan berstatus `menunggu` yang boleh dikonfirmasi — mencegah
     # konfirmasi ganda dan menghidupkan kembali pembayaran yang sudah ditolak.
     doc = await db.payments.find_one_and_update(
@@ -269,7 +272,7 @@ async def confirm_payment(id: str, actor: str = Depends(require_session)):
 
 
 @router.patch("/{id}/reject", response_model=Payment)
-async def reject_payment(id: str, actor: str = Depends(require_session)):
+async def reject_payment(id: str, actor: str = Depends(require_super)):
     # Hanya tagihan `menunggu` yang boleh ditolak.
     doc = await db.payments.find_one_and_update(
         {"id": id, "status": "menunggu"},
@@ -289,7 +292,7 @@ async def reject_payment(id: str, actor: str = Depends(require_session)):
 
 
 @router.delete("/{id}")
-async def delete_payment(id: str, actor: str = Depends(require_session)):
+async def delete_payment(id: str, actor: str = Depends(require_super)):
     doc = await db.payments.find_one({"id": id})
     result = await db.payments.delete_one({"id": id})
     if result.deleted_count == 0:

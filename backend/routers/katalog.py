@@ -20,7 +20,7 @@ from models.katalog import (
     Pendaftaran, PendaftaranCreate, TerimaInput,
 )
 from models.tenant import Tenant
-from routers.auth import require_session
+from routers.auth import require_session, require_super
 from routers.tenants import next_nomor_id
 
 public_router = APIRouter(prefix="/publik", tags=["publik"])
@@ -121,7 +121,7 @@ async def create_unit(input: LapakUnitCreate, actor: str = Depends(require_sessi
 
 
 @admin_router.put("/lapak-unit/{unit_id}", response_model=LapakUnit)
-async def update_unit(unit_id: str, input: LapakUnitUpdate, actor: str = Depends(require_session)):
+async def update_unit(unit_id: str, input: LapakUnitUpdate, actor: str = Depends(require_super)):
     unit = await _get_unit(unit_id)
     changes = input.model_dump(exclude_none=True)
     if "blok" in changes:
@@ -150,7 +150,7 @@ def _cek_magic(data: bytes, ext: str) -> bool:
 
 
 @admin_router.post("/lapak-unit/{unit_id}/foto", response_model=LapakUnit)
-async def upload_foto(unit_id: str, file: UploadFile = File(...), actor: str = Depends(require_session)):
+async def upload_foto(unit_id: str, file: UploadFile = File(...), actor: str = Depends(require_super)):
     unit = await _get_unit(unit_id)
     ext = FOTO_TYPES.get(file.content_type or "")
     if not ext:
@@ -170,7 +170,7 @@ async def upload_foto(unit_id: str, file: UploadFile = File(...), actor: str = D
 
 
 @admin_router.delete("/lapak-unit/{unit_id}/foto", response_model=LapakUnit)
-async def hapus_foto(unit_id: str, actor: str = Depends(require_session)):
+async def hapus_foto(unit_id: str, actor: str = Depends(require_super)):
     unit = await _get_unit(unit_id)
     await db.lapak_units.update_one({"id": unit_id}, {"$set": {"foto_path": None}})
     await log_activity(actor, "ubah", "lapak", unit_id, unit.blok, "foto dihapus")
@@ -178,7 +178,7 @@ async def hapus_foto(unit_id: str, actor: str = Depends(require_session)):
 
 
 @admin_router.delete("/lapak-unit/{unit_id}")
-async def delete_unit(unit_id: str, actor: str = Depends(require_session)):
+async def delete_unit(unit_id: str, actor: str = Depends(require_super)):
     unit = await _get_unit(unit_id)
     if unit.blok in await _terisi_map():
         raise HTTPException(status_code=409, detail="Lapak masih disewa — tidak bisa dihapus")
@@ -214,7 +214,7 @@ def _selesai_default(kategori: str, mulai: str) -> str:
 
 
 @admin_router.post("/pendaftaran/{pid}/terima", response_model=Tenant)
-async def terima(pid: str, input: TerimaInput, actor: str = Depends(require_session)):
+async def terima(pid: str, input: TerimaInput, actor: str = Depends(require_super)):
     item = await _get_baru(pid)
     unit = await _get_unit(item.lapak_id)
     mulai = input.mulai or today_iso()
@@ -248,7 +248,7 @@ async def _buat_penyewa(pid: str, item: Pendaftaran, unit: LapakUnit, mulai: str
 
 
 @admin_router.post("/pendaftaran/{pid}/tolak", response_model=Pendaftaran)
-async def tolak(pid: str, actor: str = Depends(require_session)):
+async def tolak(pid: str, actor: str = Depends(require_super)):
     item = await _get_baru(pid)
     await db.pendaftaran.update_one({"id": pid}, {"$set": {"status": "ditolak"}})
     await log_activity(actor, "tolak", "pendaftaran", pid, item.nama, item.blok)

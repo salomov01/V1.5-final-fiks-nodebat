@@ -11,7 +11,7 @@ from lib.activity import log_activity
 from lib.db import db
 from lib.serialize import to_aware
 from models.tenant import Tenant, TenantCreate, TenantUpdate
-from routers.auth import require_session
+from routers.auth import require_session, require_super
 
 router = APIRouter(prefix="/tenants", tags=["tenants"], dependencies=[Depends(require_session)])
 
@@ -90,7 +90,7 @@ async def get_tenant(id: str):
 
 
 @router.put("/{id}", response_model=Tenant)
-async def update_tenant(id: str, input: TenantUpdate, actor: str = Depends(require_session)):
+async def update_tenant(id: str, input: TenantUpdate, actor: str = Depends(require_super)):
     updates = input.model_dump(exclude_unset=True, exclude_none=True)
     if not updates:
         raise HTTPException(status_code=422, detail="Tidak ada perubahan yang dikirim")
@@ -108,7 +108,7 @@ async def update_tenant(id: str, input: TenantUpdate, actor: str = Depends(requi
 
 
 @router.delete("/{id}")
-async def delete_tenant(id: str, actor: str = Depends(require_session)):
+async def delete_tenant(id: str, actor: str = Depends(require_super)):
     doc = await db.tenants.find_one({"id": id})
     result = await db.tenants.delete_one({"id": id})
     if result.deleted_count == 0:

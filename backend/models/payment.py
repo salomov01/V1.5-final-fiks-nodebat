@@ -40,7 +40,7 @@ class PaymentCreate(BaseModel):
 class ScanCollectInput(BaseModel):
     """Penagihan dari hasil scan QR oleh penagih di lapangan."""
     tenant_id: str
-    penagih: str = Field(min_length=1, max_length=120)
+    penagih: str = ""  # diabaikan: server memakai nama akun yang login
     sudah_bayar: bool
 
 
@@ -56,7 +56,7 @@ class OverduePayment(Payment):
 class OverdueSummary(BaseModel):
     periode_hari_ini: str          # YYYY-MM-DD (WITA)
     jumlah_penyewa: int
-    total_tunggakan: int
+    total_tunggakan: int | None  # None untuk Staff (total uang disembunyikan)
     telat_terlama: int             # hari
     items: list[OverduePayment]
 
