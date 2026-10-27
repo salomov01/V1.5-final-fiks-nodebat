@@ -10,11 +10,11 @@ export function useAuth() {
     retry: false,
   });
   const me = query.data;
-  // Super Admin (Admin Tingkat 2) = akses penuh; Staff (Tingkat 1) = tanpa edit/hapus, ekspor, & total uang.
+  // Super Admin (Admin Tingkat 2) = akses penuh; Staf Pemungut Iuran (Tingkat 1) = tanpa edit/hapus, ekspor, & total uang.
   return { ...query, me, isSuper: me?.role === "super_admin" };
 }
 
 export const ROLE_LABEL: Record<string, string> = {
   super_admin: "Super Admin",
-  staff: "Staff / Kasir",
+  staff: "Staf Pemungut Iuran",
 };

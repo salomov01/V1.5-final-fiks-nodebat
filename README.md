@@ -111,7 +111,7 @@ frontend/src/
 
 ## 4. Peran Admin
 
-| Fitur | Super Admin (Tingkat 2) | Staff / Kasir (Tingkat 1) |
+| Fitur | Super Admin (Tingkat 2) | Staf Pemungut Iuran (Tingkat 1) |
 |---|---|---|
 | Lihat semua halaman sistem | ✅ | ✅ (kecuali Info Pasar admin & kelola akun) |
 | Input data baru (penyewa, tagihan, scan QR, lapak) | ✅ | ✅ |
@@ -122,7 +122,7 @@ frontend/src/
 | Kelola akun & Info Pasar | ✅ | ❌ |
 
 Akun Super Admin dibuat otomatis dari `backend/.env` (`ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
-Login bisa memakai username **atau** email. Akun Staff dibuat Super Admin di **Pengaturan → Akun Pengguna & Penagih**.
+Login bisa memakai username **atau** email. Akun Staf Pemungut Iuran dibuat Super Admin (username & password ditentukan Super Admin) di **Pengaturan → Akun Pengguna & Penagih**.
 
 **Scan QR:** kolom "Nama Penagih" otomatis terisi nama akun yang login (readonly) dan disimpan server.
 

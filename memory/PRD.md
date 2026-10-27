@@ -18,6 +18,7 @@ Aplikasi pendataan lapak & iuran pasar. (1) Penagih memindai QR penyewa → liha
 
 - 2026-06: Perbaikan dari code review — storage `_call` aman, catch kosong di ScanQr ditangani, `secrets` di tes, rate limit fallback anti-spoof, validasi magic-byte foto, tes katalog diperbarui. Diuji testing agent (iteration_3) + pytest 33 lulus.
 
+- 2026-06: Super Admin login `pengelola` / `jimbaran2026`; peran staff berganti nama "Staf Pemungut Iuran" (akun contoh `pemungut1`); staf dibuat Super Admin di Pengaturan.
 ## Backlog
 - 2026-06: Pembaruan besar — tema putih + aksen #1E4E42; halaman publik Home (hero, sejarah desa & pasar), Info Pasar (status buka/tutup + berita, dikelola Super Admin), Informasi Lapak; Navbar & Footer; RBAC Super Admin/Staff (server-side 403 + total uang null untuk Staff); akun pengguna menggantikan daftar penagih (nama penagih = akun login, readonly); urutan kolom Excel baru; struktur folder (assets, content, services, utils, hooks, types, pages/public|admin, components/layout|home|…); README panduan. Scan QR menolak LUNAS ganda (409). Diuji testing agent iteration_4 (57 tes backend + alur frontend).
 - P1: Notifikasi otomatis (WA API) ke pendaftar saat diterima/ditolak

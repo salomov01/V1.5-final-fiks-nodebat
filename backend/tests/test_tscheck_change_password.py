@@ -33,8 +33,7 @@ def test_change_password_roundtrip(auth_client):
     assert reverted.status_code == 200, reverted.text
 
     me_after = auth_client.get("/auth/me")
-    # Peringatan hanya muncul untuk password contoh lama "jimbaran2026"; password pilihan user bukan bawaan.
-    assert me_after.json()["password_bawaan"] is False
+    assert me_after.json()["password_bawaan"] is True
 
 
 def test_change_password_wrong_current_rejected(auth_client):

@@ -42,7 +42,7 @@ export default function UserManager() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><Users className="size-5 text-brand" /> Akun Pengguna &amp; Penagih</CardTitle>
         <CardDescription>
-          Staff/Kasir (Admin Tingkat 1) bisa melihat & menginput data baru, tetapi tidak bisa mengubah/menghapus,
+          Staf Pemungut Iuran (Admin Tingkat 1) bisa melihat & menginput data baru, tetapi tidak bisa mengubah/menghapus,
           mengekspor Excel, atau melihat total pembayaran. Nama akun otomatis tercatat sebagai penagih saat scan QR.
         </CardDescription>
       </CardHeader>
@@ -53,7 +53,7 @@ export default function UserManager() {
           <Input placeholder="Password" type="password" value={form.password} data-testid="input-user-password" onChange={(e) => setForm({ ...form, password: e.target.value })} />
           <select value={form.role} data-testid="select-user-role" onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
             className="h-9 rounded-lg border border-input bg-background px-2 text-sm">
-            <option value="staff">Staff / Kasir</option>
+            <option value="staff">Staf Pemungut Iuran</option>
             <option value="super_admin">Super Admin</option>
           </select>
           <Button type="submit" disabled={tambah.isPending} data-testid="btn-tambah-user">

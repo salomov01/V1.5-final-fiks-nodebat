@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 
 from tests.conftest import ADMIN_CREDENTIAL_LOCK, ADMIN_PASSWORD, ADMIN_USERNAME, API_URL
 
-STAFF_U, STAFF_P = "kasir1", "kasir12345"
+STAFF_U, STAFF_P = "pemungut1", "pemungut123"
 J = {"Content-Type": "application/json"}
 
 
@@ -26,6 +26,11 @@ def admin():
         c = _login(ADMIN_USERNAME, ADMIN_PASSWORD)
     yield c
     c.close()
+    # Bersihkan akun uji "test_*" agar tidak menumpuk di daftar akun.
+    from pymongo import MongoClient
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+    MongoClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]].users.delete_many({"username": {"$regex": "^test_"}})
 
 
 @pytest.fixture(scope="module")
@@ -58,7 +63,7 @@ def test_login_by_email():
 
 def test_staff_me(staff):
     me = staff.get("/auth/me").json()
-    assert me["role"] == "staff" and me["nama"] == "Made Kasir"
+    assert me["role"] == "staff" and me["nama"] == "I Made Pemungut"
 
 
 # --- staff forbidden
@@ -112,7 +117,7 @@ def test_staff_create_tenant_and_payment(staff, admin):
     tid = r.json()["id"]
     p = staff.post("/payments", headers=J, json={"tenant_id": tid, "periode": "TEST_Staff", "jumlah": 5000, "metode": "tunai", "penagih": "Hacker"})
     assert p.status_code == 201, p.text
-    assert p.json()["penagih"] == "Made Kasir"
+    assert p.json()["penagih"] == "I Made Pemungut"
     admin.delete(f"/payments/{p.json()['id']}")
     admin.delete(f"/tenants/{tid}")
 
@@ -121,7 +126,7 @@ def test_scan_collect_penagih_forced(staff, admin, tenant):
     r = staff.post("/payments/scan-collect", headers=J, json={"tenant_id": tenant["id"], "sudah_bayar": True, "penagih": "Orang Lain"})
     assert r.status_code == 201, r.text
     body = r.json()
-    assert body["penagih"] == "Made Kasir" and body["status"] == "lunas"
+    assert body["penagih"] == "I Made Pemungut" and body["status"] == "lunas"
     admin.delete(f"/payments/{body['id']}")
 
 
