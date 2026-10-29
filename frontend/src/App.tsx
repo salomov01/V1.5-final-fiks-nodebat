@@ -6,13 +6,12 @@ import InfoPasar from "@/pages/public/InfoPasar";
 import InformasiLapak from "@/pages/public/InformasiLapak";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/admin/Dashboard";
-import Lapak from "@/pages/admin/Lapak";
+import DataPedagang from "@/pages/admin/DataPedagang";
+import DataLapak from "@/pages/admin/DataLapak";
+import PendaftaranLapak from "@/pages/admin/PendaftaranLapak";
 import Pembayaran from "@/pages/admin/Pembayaran";
-import Pendaftaran from "@/pages/admin/Pendaftaran";
 import Pengaturan from "@/pages/admin/Pengaturan";
-import Riwayat from "@/pages/admin/Riwayat";
 import ScanQr from "@/pages/admin/ScanQr";
-import Tunggakan from "@/pages/admin/Tunggakan";
 import InfoPasarAdmin from "@/pages/admin/InfoPasarAdmin";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,12 +51,11 @@ function Protected() {
       <AppShell>
         <Routes>
           <Route index element={<Dashboard />} />
-          <Route path="lapak" element={<Lapak />} />
-          <Route path="pendaftaran" element={<Pendaftaran />} />
+          <Route path="pedagang" element={<DataPedagang />} />
+          <Route path="lapak" element={<DataLapak />} />
+          <Route path="pendaftaran" element={<PendaftaranLapak />} />
           <Route path="pembayaran" element={<Pembayaran />} />
-          <Route path="tunggakan" element={<Tunggakan />} />
           <Route path="scan-qr" element={<ScanQr />} />
-          <Route path="riwayat" element={<Riwayat />} />
           <Route path="info-pasar" element={<SuperOnly><InfoPasarAdmin /></SuperOnly>} />
           <Route path="pengaturan" element={<Pengaturan />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

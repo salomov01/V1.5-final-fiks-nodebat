@@ -31,3 +31,4 @@ jq>=1.6.0
 typer>=0.9.0
 emergentintegrations==0.2.1
 python-dateutil==2.9.0.post0
+reportlab==5.1.0

@@ -81,3 +81,16 @@ async def update_user(user_id: str, input: UserUpdate, me: Principal = Depends(g
         await db.sessions.delete_many({"user_id": user_id})
     await log_activity(me.username, "ubah", "akun", user_id, user["username"], ", ".join(k for k in changes if k != "salt"))
     return _out(await db.users.find_one({"id": user_id}))
+
+
+@router.delete("/{user_id}")
+async def delete_user(user_id: str, me: Principal = Depends(get_principal)):
+    """Hapus akun Penagih / Pengguna (khusus Super Admin, tidak bisa menghapus diri sendiri)."""
+    if user_id == me.id:
+        raise HTTPException(status_code=409, detail="Tidak bisa menghapus akun sendiri")
+    user = await db.users.find_one_and_delete({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Akun tidak ditemukan")
+    await db.sessions.delete_many({"user_id": user_id})
+    await log_activity(me.username, "hapus", "akun", user_id, user["username"])
+    return {"deleted": True}

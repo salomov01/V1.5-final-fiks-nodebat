@@ -1,18 +1,5 @@
-// Mirror tangan dari model Pydantic di backend/models/ — jaga sinkron di edit yang sama.
+// Mirror tangan dari model Pydantic di backend/models/pasar.py — jaga sinkron di edit yang sama.
 
-// Mirror Activity di backend/models/activity.py
-export interface Activity {
-  id: string;
-  actor: string;
-  action: string; // buat | ubah | hapus | konfirmasi | tolak
-  entity: string; // penyewa | pembayaran | akun
-  entity_id: string;
-  label: string;
-  detail: string;
-  created_at: string;
-}
-
-// Mirror MeOutput di backend/routers/auth.py
 export type Role = "super_admin" | "staff";
 
 export interface MeOutput {
@@ -20,69 +7,7 @@ export interface MeOutput {
   nama: string;
   username: string;
   role: Role;
-  /** true selama password masih nilai bawaan .env (belum pernah diganti). */
-  password_bawaan: boolean;
-}
-
-export type KategoriSewa = "harian" | "bulanan" | "tahunan";
-export type StatusPenyewa = "aktif" | "berhenti";
-export type MetodeBayar = "tunai" | "qris" | "transfer";
-export type StatusBayar = "menunggu" | "lunas" | "ditolak";
-
-export interface Tenant {
-  id: string;
-  nomor_id: string;
-  nama_lengkap: string;
-  no_hp: string;
-  kategori: KategoriSewa;
-  blok: string;
-  tarif: number;
-  mulai: string;
-  selesai: string;
-  status: StatusPenyewa;
-  catatan: string;
-  created_at: string;
-}
-
-export interface TenantCreate {
-  nomor_id?: string; // kosong -> digenerate otomatis backend
-  nama_lengkap: string;
-  no_hp?: string;
-  kategori: KategoriSewa;
-  blok: string;
-  tarif: number;
-  mulai: string;
-  selesai: string;
-  status?: StatusPenyewa;
-  catatan?: string;
-}
-
-export interface TenantUpdate {
-  nama_lengkap?: string;
-  no_hp?: string;
-  kategori?: KategoriSewa;
-  blok?: string;
-  tarif?: number;
-  mulai?: string;
-  selesai?: string;
-  status?: StatusPenyewa;
-  catatan?: string;
-}
-
-export interface Payment {
-  id: string;
-  tenant_id: string;
-  nomor_id: string;
-  nama_lengkap: string;
-  periode: string;
-  jumlah: number;
-  metode: MetodeBayar;
-  status: StatusBayar;
-  jatuh_tempo: string;
-  catatan: string;
-  penagih: string;
-  confirmed_at: string | null;
-  created_at: string;
+  password_bawaan: boolean; // true selama password masih password contoh lama
 }
 
 export interface UserAccount {
@@ -91,6 +16,102 @@ export interface UserAccount {
   username: string;
   role: Role;
   aktif: boolean;
+}
+
+export interface Pedagang {
+  id: string;
+  user_id: string; // [NO_URUT]-[3 digit akhir KTP], isi QR permanen
+  nama: string;
+  nik: string;
+  no_hp: string;
+  alamat: string;
+  aktif: boolean;
+  created_at: string;
+}
+
+export interface PedagangRingkas {
+  id: string;
+  user_id: string;
+  nama: string;
+}
+
+export interface LapakPublik {
+  id: string;
+  nama: string;
+  jenis: string;
+  harga_sewa: number; // per bulan
+  iuran: number; // per hari
+  deskripsi: string;
+  foto_url: string | null;
+}
+
+export interface LapakAdmin extends LapakPublik {
+  status: "kosong" | "terisi";
+  penyewa: string | null;
+  terisi_sampai: string | null;
+}
+
+export interface Sewa {
+  id: string;
+  pedagang_id: string | null;
+  user_id: string | null;
+  nama: string;
+  no_hp: string;
+  lapak_id: string;
+  lapak_nama: string;
+  mulai: string;
+  selesai: string;
+  hari: number;
+  harga_sewa: number;
+  iuran: number;
+  total_harga: number;
+  status: "menunggu" | "aktif" | "ditolak";
+  sumber: "publik" | "admin";
+  catatan: string;
+  terbayar: number;
+  sisa: number;
+  created_at: string;
+}
+
+export interface Payment {
+  id: string;
+  jenis: "iuran" | "sewa";
+  sewa_id: string;
+  pedagang_id: string;
+  user_id: string;
+  nama: string;
+  lapak_nama: string;
+  periode: string;
+  jumlah: number;
+  tanggal: string;
+  penagih: string;
+  status: "lunas";
+  created_at: string;
+}
+
+export interface PaymentList {
+  items: Payment[];
+  total_sewa: number | null; // null untuk Staf Pemungut Iuran
+  total_iuran: number | null;
+  total: number | null;
+}
+
+export interface ScanResult {
+  pedagang: Pedagang;
+  sewa: (Sewa & { iuran_hari_ini_lunas: boolean })[];
+  tanggal: string;
+}
+
+export interface DashboardStats {
+  jumlah_pedagang: number;
+  jumlah_lapak: number;
+  lapak_terisi: number;
+  sewa_menunggu: number;
+  iuran_hari_ini: number;
+  sewa_aktif: number;
+  pemasukan_hari_ini: number | null;
+  pemasukan_bulan_ini: number | null;
+  grafik_6_bulan: { label: string; sewa: number; iuran: number }[] | null;
 }
 
 export interface InfoPasar {
@@ -106,87 +127,4 @@ export interface Berita {
   judul: string;
   isi: string;
   tanggal: string;
-}
-
-export interface PaymentCreate {
-  tenant_id: string;
-  periode: string;
-  jumlah: number;
-  metode: MetodeBayar;
-  jatuh_tempo?: string;
-  catatan?: string;
-  penagih?: string;
-}
-
-// Mirror OverduePayment / OverdueSummary / BulkBillResult di backend/models/payment.py
-export interface OverduePayment extends Payment {
-  hari_telat: number;
-  kategori: string;
-  blok: string;
-  no_hp: string;
-}
-
-export interface OverdueSummary {
-  periode_hari_ini: string;
-  jumlah_penyewa: number;
-  total_tunggakan: number | null; // null untuk Staff
-  telat_terlama: number;
-  items: OverduePayment[];
-}
-
-export interface BulkBillResult {
-  periode: string;
-  dibuat: number;
-  dilewati: number;
-  total_nilai: number;
-}
-
-export interface RevenuePoint {
-  label: string;
-  total: number;
-}
-
-export interface DashboardStats {
-  total_penyewa: number;
-  penyewa_aktif: number;
-  tagihan_menunggu: number;
-  // null untuk Staff: total uang disembunyikan server
-  nilai_menunggu: number | null;
-  pemasukan_bulan_ini: number | null;
-  pemasukan_bulan_lalu: number | null;
-  by_kategori: Record<string, number>;
-  revenue_6m: RevenuePoint[] | null;
-  recent_payments: Payment[];
-  generated_at: string;
-}
-
-export interface LapakPublik {
-  id: string;
-  blok: string;
-  jenis: string;
-  kategori: KategoriSewa;
-  tarif: number;
-  deskripsi: string;
-  foto_url: string | null;
-}
-
-export interface LapakUnit extends LapakPublik {
-  status: "kosong" | "terisi";
-  terisi_sampai: string | null;
-  created_at: string;
-}
-
-export interface Pendaftaran {
-  id: string;
-  nama: string;
-  no_hp: string;
-  lapak_id: string;
-  blok: string;
-  jenis: string;
-  kategori: KategoriSewa;
-  tarif: number;
-  catatan: string;
-  status: "baru" | "diterima" | "ditolak";
-  tenant_nomor_id: string | null;
-  created_at: string;
 }

@@ -1,149 +1,100 @@
-"""Ekspor rekap pembayaran sewa lapak ke Excel (openpyxl), dengan filter bulan & kategori."""
+"""Ekspor laporan keuangan (Excel & PDF) dengan filter Harian / Bulanan / Tahunan — khusus Super Admin."""
 
 import io
-import os
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-from lib.config import JUDUL_LAPORAN_EXCEL, LABEL_ZONA_WAKTU
-from lib.db import db
+from lib.config import NAMA_PASAR
 from lib.dates import today_iso
-from lib.serialize import to_aware
-from models.payment import Payment
 from routers.auth import require_super
+from routers.payments import cari_pembayaran, rentang
 
 router = APIRouter(prefix="/laporan", tags=["laporan"], dependencies=[Depends(require_super)])
 
-STATUS_LABEL = {"menunggu": "Menunggu", "lunas": "Lunas", "ditolak": "Ditolak"}
-KATEGORI_LABEL = {"harian": "Harian", "bulanan": "Bulanan", "tahunan": "Tahunan"}
-BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli",
-         "Agustus", "September", "Oktober", "November", "Desember"]
+# Urutan kolom baku: Nama, ID, Periode Sewa, Harga/Jumlah, Penagih, Tanggal, Status (+ Jenis)
+HEADERS = ["Nama", "ID", "Periode Sewa", "Harga/Jumlah (Rp)", "Penagih", "Tanggal", "Status", "Jenis"]
+LABEL_PERIODE = {"harian": "Harian", "bulanan": "Bulanan", "tahunan": "Tahunan"}
 
 
-def _aman_excel(nilai: str) -> str:
-    """Cegah formula injection: nilai yang diawali = + - @ diberi kutip tunggal
-    agar Excel/LibreOffice membacanya sebagai teks, bukan rumus."""
-    teks = "" if nilai is None else str(nilai)
-    return f"'{teks}" if teks[:1] in ("=", "+", "-", "@") else teks
+def _aman(v: str) -> str:
+    """Cegah formula injection di Excel."""
+    return "'" + v if v and v[0] in "=+-@\t\r" else v
 
 
-def _fmt_dt(value) -> str:
-    if not value:
-        return "-"
-    return value.strftime("%d/%m/%Y %H:%M")
+async def _data(periode: str, tanggal: str, jenis: str | None):
+    items = await cari_pembayaran(periode, tanggal, jenis)
+    rows = [[p.nama, p.user_id, p.lapak_nama + " — " + p.periode, p.jumlah, p.penagih, p.tanggal, "Lunas",
+             "Sewa Lapak" if p.jenis == "sewa" else "Iuran"] for p in items]
+    ts = sum(p.jumlah for p in items if p.jenis == "sewa")
+    ti = sum(p.jumlah for p in items if p.jenis == "iuran")
+    dari, sampai = rentang(periode, tanggal)
+    judul = f"Laporan Pembayaran {LABEL_PERIODE[periode]} ({dari} s/d {sampai})"
+    return rows, ts, ti, judul, f"laporan-{periode}-{dari}"
+
+
+Q_PERIODE = Query("bulanan", pattern="^(harian|bulanan|tahunan)$")
+Q_TANGGAL = Query(default_factory=today_iso, pattern=r"^\d{4}-\d{2}-\d{2}$")
+Q_JENIS = Query(None, pattern="^(iuran|sewa)$")
 
 
 @router.get("/pembayaran.xlsx")
-async def export_pembayaran_xlsx(
-    bulan: str | None = Query(None, pattern=r"^\d{4}-\d{2}$", description="YYYY-MM (waktu WITA)"),
-    kategori: str | None = Query(None, description="harian | bulanan | tahunan"),
-    status: str | None = Query(None, description="menunggu | lunas | ditolak"),
-):
-    if kategori and kategori not in KATEGORI_LABEL:
-        raise HTTPException(status_code=422, detail="Kategori tidak dikenal")
-    if status and status not in STATUS_LABEL:
-        raise HTTPException(status_code=422, detail="Status tidak dikenal")
-
-    query: dict = {}
-    if status:
-        query["status"] = status
-
-    # Filter kategori: ambil tenant_id penyewa pada kategori tersebut.
-    if kategori:
-        tenant_ids = [t["id"] async for t in db.tenants.find({"kategori": kategori}, {"id": 1})]
-        query["tenant_id"] = {"$in": tenant_ids}
-
-    docs = await db.payments.find(query).sort("created_at", -1).to_list(2000)
-    payments = [Payment(**to_aware(d, "created_at", "confirmed_at")) for d in docs]
-
-    # Filter bulan dihitung pada zona WITA (created_at disimpan UTC).
-    zone = ZoneInfo(os.environ.get("APP_TZ", "UTC"))
-    if bulan:
-        year, month = int(bulan[:4]), int(bulan[5:7])
-        if not 1 <= month <= 12:
-            raise HTTPException(status_code=422, detail="Bulan tidak valid")
-
-        def in_month(p: Payment) -> bool:
-            dt = p.created_at
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            local = dt.astimezone(zone)
-            return local.year == year and local.month == month
-
-        payments = [p for p in payments if in_month(p)]
-
-    filters: list[str] = []
-    if bulan:
-        filters.append(f"Bulan {BULAN[int(bulan[5:7]) - 1]} {bulan[:4]}")
-    if kategori:
-        filters.append(f"Kategori {KATEGORI_LABEL[kategori]}")
-    if status:
-        filters.append(f"Status {STATUS_LABEL[status]}")
-    filter_text = " • ".join(filters) if filters else "Semua data"
-
+async def export_xlsx(periode: str = Q_PERIODE, tanggal: str = Q_TANGGAL, jenis: str | None = Q_JENIS):
+    rows, ts, ti, judul, nama = await _data(periode, tanggal, jenis)
     wb = Workbook()
     ws = wb.active
-    ws.title = "Rekap Pembayaran"
+    ws.title = "Pembayaran"
+    ws.append([NAMA_PASAR])
+    ws.append([judul])
+    ws.append([f"Dicetak {datetime.now().strftime('%Y-%m-%d %H:%M')}"])
+    ws.append([])
+    ws.append(HEADERS)
+    ws["A1"].font = Font(bold=True, size=14)
+    for c in ws[5]:
+        c.font, c.fill = Font(bold=True, color="FFFFFF"), PatternFill("solid", fgColor="1E4E42")
+    for r in rows:
+        ws.append([_aman(str(v)) if isinstance(v, str) else v for v in r])
+    ws.append([])
+    for label, val in (("Total Sewa Lapak", ts), ("Total Iuran", ti), ("Total Pemasukan", ts + ti)):
+        ws.append(["", "", label, val])
+        ws.cell(ws.max_row, 3).font = ws.cell(ws.max_row, 4).font = Font(bold=True)
+    for col, w in zip("ABCDEFGH", [28, 10, 40, 18, 20, 12, 10, 12]):
+        ws.column_dimensions[col].width = w
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             headers={"Content-Disposition": f'attachment; filename="{nama}.xlsx"'})
 
-    ws.merge_cells("A1:G1")
-    ws["A1"] = JUDUL_LAPORAN_EXCEL
-    ws["A1"].font = Font(bold=True, size=13)
-    ws.merge_cells("A2:G2")
-    ws["A2"] = f"Filter: {filter_text}"
-    ws["A2"].font = Font(size=10, bold=True, color="B45309")
-    ws.merge_cells("A3:G3")
-    ws["A3"] = f"Diekspor: {today_iso()} ({LABEL_ZONA_WAKTU}) • {len(payments)} transaksi"
-    ws["A3"].font = Font(size=10, color="64748B")
 
-    # Urutan kolom sesuai permintaan: Nama, ID, Periode Sewa, Harga/Jumlah, Penagih, Tanggal, Status
-    headers = ["Nama", "ID", "Periode Sewa", "Harga/Jumlah (Rp)", "Penagih", "Tanggal", "Status"]
-    header_fill = PatternFill("solid", fgColor="1E4E42")
-    for col, title in enumerate(headers, start=1):
-        cell = ws.cell(row=5, column=col, value=title)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = header_fill
+def _rp(n: int) -> str:
+    return "Rp " + f"{n:,}".replace(",", ".")
 
-    total_lunas = 0
-    total_menunggu = 0
-    row_num = 6
-    for p in payments:
-        tanggal = p.confirmed_at if p.status == "lunas" and p.confirmed_at else p.created_at
-        row = [
-            _aman_excel(p.nama_lengkap), _aman_excel(p.nomor_id), _aman_excel(p.periode), p.jumlah,
-            _aman_excel(p.penagih) or "-", _fmt_dt(tanggal), STATUS_LABEL.get(p.status, p.status),
-        ]
-        for col, value in enumerate(row, start=1):
-            ws.cell(row=row_num, column=col, value=value)
-        if p.status == "lunas":
-            total_lunas += p.jumlah
-        elif p.status == "menunggu":
-            total_menunggu += p.jumlah
-        row_num += 1
 
-    if not payments:
-        ws.cell(row=row_num, column=1, value="Tidak ada transaksi pada filter ini").font = Font(italic=True)
-        row_num += 1
-
-    ws.cell(row=row_num + 1, column=3, value="Total Lunas").font = Font(bold=True)
-    ws.cell(row=row_num + 1, column=4, value=total_lunas).font = Font(bold=True)
-    ws.cell(row=row_num + 2, column=3, value="Total Menunggu Konfirmasi").font = Font(bold=True)
-    ws.cell(row=row_num + 2, column=4, value=total_menunggu).font = Font(bold=True)
-
-    for col, width in enumerate([28, 14, 24, 18, 20, 18, 12], start=1):
-        ws.column_dimensions[chr(64 + col)].width = width
-
-    buffer = io.BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    suffix = "-".join(x for x in [bulan, kategori, status] if x)
-    filename = f"rekap-pembayaran{'-' + suffix if suffix else ''}-{today_iso()}.xlsx"
-    return StreamingResponse(
-        buffer,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+@router.get("/pembayaran.pdf")
+async def export_pdf(periode: str = Q_PERIODE, tanggal: str = Q_TANGGAL, jenis: str | None = Q_JENIS):
+    rows, ts, ti, judul, nama = await _data(periode, tanggal, jenis)
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=28, rightMargin=28, topMargin=28, bottomMargin=28)
+    st = getSampleStyleSheet()
+    body = [[r[0], r[1], r[2], _rp(r[3]), r[4], r[5], r[6], r[7]] for r in rows] or [["Tidak ada data"] + [""] * 7]
+    table = Table([HEADERS] + body + [["", "", "Total Sewa Lapak", _rp(ts)], ["", "", "Total Iuran", _rp(ti)],
+                                      ["", "", "Total Pemasukan", _rp(ts + ti)]], repeatRows=1,
+                  colWidths=[130, 50, 210, 85, 95, 65, 45, 60])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E4E42")), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTSIZE", (0, 0), (-1, -1), 8), ("GRID", (0, 0), (-1, len(body)), 0.4, colors.HexColor("#CBD5E1")),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("FONTNAME", (2, -3), (3, -1), "Helvetica-Bold"),
+        ("ALIGN", (3, 1), (3, -1), "RIGHT"),
+    ]))
+    doc.build([Paragraph(NAMA_PASAR, st["Title"]), Paragraph(judul, st["Heading3"]), Spacer(1, 8), table])
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{nama}.pdf"'})

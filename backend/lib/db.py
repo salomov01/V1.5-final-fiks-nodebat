@@ -18,31 +18,27 @@ logger = logging.getLogger(__name__)
 
 # One entry per collection: every field a route filters, sorts, or dedupes on. Applied by ensure_indexes() at startup.
 INDEXES: dict[str, list[IndexModel]] = {
-    "tenants": [
+    "pedagang": [
         IndexModel([("id", ASCENDING)], name="id", unique=True),
-        IndexModel([("nomor_id", ASCENDING)], name="nomor_id", unique=True),
-        IndexModel([("kategori", ASCENDING), ("status", ASCENDING)], name="kategori_status"),
-        IndexModel([("created_at", DESCENDING)], name="created_desc"),
+        IndexModel([("user_id", ASCENDING)], name="user_id", unique=True),
+        IndexModel([("nik", ASCENDING)], name="nik", unique=True),
     ],
-    "payments": [
-        IndexModel([("id", ASCENDING)], name="id", unique=True),
-        IndexModel([("tenant_id", ASCENDING), ("created_at", DESCENDING)], name="tenant_created"),
-        IndexModel([("status", ASCENDING), ("created_at", DESCENDING)], name="status_created"),
-    ],
-    "counters": [IndexModel([("_id", ASCENDING)], name="_id")],
-    "penagih": [
+    "lapak": [
         IndexModel([("id", ASCENDING)], name="id", unique=True),
         IndexModel([("nama", ASCENDING)], name="nama", unique=True),
     ],
-    "lapak_units": [
+    "sewa": [
         IndexModel([("id", ASCENDING)], name="id", unique=True),
-        IndexModel([("blok", ASCENDING)], name="blok", unique=True),
-    ],
-    "pendaftaran": [
-        IndexModel([("id", ASCENDING)], name="id", unique=True),
-        IndexModel([("status", ASCENDING), ("created_at", DESCENDING)], name="status_created"),
+        IndexModel([("lapak_id", ASCENDING), ("status", ASCENDING)], name="lapak_status"),
+        IndexModel([("pedagang_id", ASCENDING), ("status", ASCENDING)], name="pedagang_status"),
         IndexModel([("ip", ASCENDING), ("created_at", DESCENDING)], name="ip_created"),
     ],
+    "payments": [
+        IndexModel([("id", ASCENDING)], name="id", unique=True),
+        IndexModel([("tanggal", DESCENDING), ("jenis", ASCENDING)], name="tanggal_jenis"),
+        IndexModel([("sewa_id", ASCENDING), ("jenis", ASCENDING)], name="sewa_jenis"),
+    ],
+    "counters": [IndexModel([("_id", ASCENDING)], name="_id")],
     "users": [
         IndexModel([("id", ASCENDING)], name="id", unique=True),
         IndexModel([("username", ASCENDING)], name="username", unique=True),

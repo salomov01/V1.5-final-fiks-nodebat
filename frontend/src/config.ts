@@ -30,33 +30,7 @@ export const BRANDING = {
 };
 
 /**
- * 2. TARIF ACUAN PER KATEGORI SEWA (Rupiah)
- * Angka ini otomatis terisi saat menambah penyewa baru (masih bisa diubah manual).
- * Samakan dengan TARIF_DEFAULT di backend/lib/config.py.
- */
-export const TARIF_DEFAULT: Record<string, number> = {
-  harian: 25_000,
-  bulanan: 450_000,
-  tahunan: 5_000_000,
-};
-
-/**
- * 3. ISI PESAN PENGINGAT WHATSAPP
- * Bagian {nama}, {blok}, {nomorId} otomatis diganti data penyewa.
- */
-export const PESAN_WA = {
-  /** Kalimat sapaan pembuka. */
-  sapaan: "Om Swastiastu, Bapak/Ibu {nama}.",
-  /** Kalimat pengenalan pengirim + data lapak. */
-  identitas:
-    "Kami dari pengelola {namaPasar}. Data lapak Bapak/Ibu: {blok} (Nomor ID {nomorId}).",
-  /** Kalimat penutup: cara pembayaran & ucapan terima kasih. */
-  penutup:
-    "Pembayaran dapat dilakukan tunai kepada juru pungut pasar, QRIS Desa Adat, atau transfer LPD Jimbaran. Terima kasih atas kerja samanya. Suksma 🙏",
-};
-
-/**
- * 4. KONTAK ADMIN UNTUK PENDAFTARAN LAPAK (halaman publik)
+ * 2. NOMOR HP / WHATSAPP ADMIN UNTUK KONFIRMASI SEWA LAPAK (halaman publik)
  * Ganti `whatsapp` dengan nomor WA admin asli, format 62xxxxxxxxxx (tanpa + / spasi).
  */
 export const KONTAK_ADMIN = {
@@ -64,9 +38,9 @@ export const KONTAK_ADMIN = {
 };
 
 /**
- * 5. FOTO CONTOH LAPAK (dipakai bila pengelola belum mengunggah foto)
+ * 3. FOTO CONTOH LAPAK (dipakai bila pengelola belum mengunggah foto)
  * Kunci = jenis lapak (huruf kecil). Ganti URL-nya dengan foto lain bila perlu,
- * atau unggah foto asli tiap lapak di menu Pendaftaran & Katalog → Katalog Lapak.
+ * atau unggah foto asli tiap lapak di menu Data Lapak dan Iuran.
  */
 export const FOTO_CONTOH: Record<string, string> = {
   pangan: "https://images.unsplash.com/photo-1628575005417-6560070073f6?auto=format&fit=crop&w=800&q=70",

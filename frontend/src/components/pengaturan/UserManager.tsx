@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { KeyRound, UserPlus, Users } from "lucide-react";
-import { apiGet, apiPatch, apiPost } from "@/services/api";
+import { KeyRound, Trash2, UserPlus, Users } from "lucide-react";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
 import { errDetail } from "@/utils/errors";
 import { ROLE_LABEL, useAuth } from "@/hooks/useAuth";
 import type { Role, UserAccount } from "@/types";
@@ -30,6 +30,11 @@ export default function UserManager() {
       apiPatch<UserAccount>(`/users/${id}`, body),
     onSuccess: () => { refresh(); toast.success("Akun diperbarui"); },
     onError: (e) => toast.error(errDetail(e, "Gagal memperbarui akun")),
+  });
+  const hapus = useMutation({
+    mutationFn: (id: string) => apiDelete(`/users/${id}`),
+    onSuccess: () => { refresh(); toast.success("Akun dihapus"); },
+    onError: (e) => toast.error(errDetail(e, "Gagal menghapus akun")),
   });
 
   const resetPassword = (u: UserAccount) => {
@@ -74,6 +79,13 @@ export default function UserManager() {
                 data-testid={`btn-toggle-aktif-${u.username}`} onClick={() => ubah.mutate({ id: u.id, body: { aktif: !u.aktif } })}>
                 {u.aktif ? "Nonaktifkan" : "Aktifkan"}
               </Button>
+              {/* Hapus akun Penagih / Pengguna (Super Admin, bukan akun sendiri) */}
+              {u.id !== me?.id && (
+                <Button size="icon-sm" variant="ghost" title="Hapus akun" data-testid={`btn-hapus-user-${u.username}`}
+                  onClick={() => confirm(`Hapus akun ${u.username}?`) && hapus.mutate(u.id)}>
+                  <Trash2 className="size-4 text-red-600" />
+                </Button>
+              )}
             </div>
           ))}
         </div>

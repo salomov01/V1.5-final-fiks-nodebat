@@ -1,134 +1,48 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { toast } from "sonner";
 import { Download, Printer } from "lucide-react";
 import { BRANDING } from "@/config";
-import type { Tenant } from "@/types";
+import type { Pedagang } from "@/types";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { KategoriBadge } from "@/components/common/Badges";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-interface Props {
-  tenant: Tenant | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export default function QrCardDialog({ tenant, open, onOpenChange }: Props) {
+// Kartu QR permanen pedagang. Isi QR = User ID (mis. 01-123) — tidak berubah selamanya.
+export default function QrCardDialog({ pedagang, onClose }: { pedagang: Pedagang | null; onClose: () => void }) {
   const [qrUrl, setQrUrl] = useState("");
-  const payload = tenant
-    ? JSON.stringify({ nomor_id: tenant.nomor_id, nama: tenant.nama_lengkap })
-    : "";
-
-  // Isi QR hanya: Nama Lengkap + Nomor ID (sesuai spesifikasi).
-  // toDataURL + <img>: tidak ada ketergantungan pada ref canvas / timing mount dialog.
   useEffect(() => {
-    if (!open || !payload) return;
-    let cancelled = false;
-    QRCode.toDataURL(payload, {
-      width: 460,
-      margin: 1,
-      color: { dark: "#0F172A", light: "#FFFFFF" },
-    })
-      .then((dataUrl) => {
-        if (!cancelled) setQrUrl(dataUrl);
-      })
-      .catch(() => toast.error("Gagal membuat QR Code"));
-    return () => {
-      cancelled = true;
-    };
-  }, [open, payload]);
+    if (!pedagang) return;
+    let batal = false;
+    QRCode.toDataURL(pedagang.user_id, { width: 460, margin: 1, color: { dark: "#1E4E42", light: "#FFFFFF" } })
+      .then((url) => { if (!batal) setQrUrl(url); })
+      .catch(() => setQrUrl(""));
+    return () => { batal = true; };
+  }, [pedagang]);
 
-  useEffect(() => {
-    if (!open) setQrUrl("");
-  }, [open]);
-
-  const download = () => {
-    if (!qrUrl || !tenant) return;
-    const anchor = document.createElement("a");
-    anchor.href = qrUrl;
-    anchor.download = `QR-${tenant.nomor_id}.png`;
-    anchor.click();
-    toast.success("QR Code berhasil diunduh");
+  const unduh = () => {
+    const a = document.createElement("a");
+    a.href = qrUrl;
+    a.download = `QR-${pedagang?.user_id}.png`;
+    a.click();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" data-testid="dialog-qr-penyewa">
+    <Dialog open={!!pedagang} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm" data-testid="dialog-qr-pedagang">
         <DialogHeader>
-          <DialogTitle>QR Code Penyewa</DialogTitle>
-          <DialogDescription>
-            Pindai QR ini untuk membuka data penyewa dan tagihannya. Isi QR: Nama Lengkap + Nomor ID.
-          </DialogDescription>
+          <DialogTitle>QR Code Pedagang</DialogTitle>
+          <DialogDescription>Cetak & tempel di lapak. QR ini permanen.</DialogDescription>
         </DialogHeader>
-
-        {tenant && (
-          <div className="print-area rounded-2xl bg-brand p-6 text-white" data-testid="kartu-qr">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-brand text-xs font-bold text-slate-900">
-                  JMB
-                </span>
-                <span className="text-xs font-medium text-slate-300">{BRANDING.namaDesa}</span>
-              </div>
-              <span className="rounded-full bg-brand px-2.5 py-0.5 text-xs font-semibold text-slate-900">
-                ID Lapak
-              </span>
-            </div>
-
-            <div className="mx-auto mt-5 w-fit rounded-xl bg-white p-3">
-              {qrUrl ? (
-                <img
-                  src={qrUrl}
-                  alt={`QR Code ${tenant.nomor_id}`}
-                  data-testid="qr-image"
-                  className="h-56 w-56"
-                />
-              ) : (
-                <div className="size-56 animate-pulse rounded-lg bg-slate-200" data-testid="qr-loading" />
-              )}
-            </div>
-
-            <div className="mt-5 text-center">
-              <p className="text-lg font-bold" data-testid="qr-nama">
-                {tenant.nama_lengkap}
-              </p>
-              <p
-                className="mt-1 font-mono text-sm font-semibold tracking-widest text-brand-100"
-                data-testid="qr-nomor-id"
-              >
-                {tenant.nomor_id}
-              </p>
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <KategoriBadge kategori={tenant.kategori} />
-                <span className="rounded-full border border-slate-700 px-2.5 py-0.5 text-xs text-slate-300">
-                  {tenant.blok}
-                </span>
-              </div>
-            </div>
+        {pedagang && (
+          <div className="print-area flex flex-col items-center gap-2 rounded-2xl border-2 border-brand p-5 text-center">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand">{BRANDING.namaPasar}</p>
+            {qrUrl && <img src={qrUrl} alt={`QR ${pedagang.user_id}`} className="size-52" data-testid="qr-image" />}
+            <p className="text-lg font-bold" data-testid="qr-nama">{pedagang.nama}</p>
+            <p className="font-mono text-2xl font-bold text-brand" data-testid="qr-user-id">{pedagang.user_id}</p>
           </div>
         )}
-
         <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            onClick={download}
-            disabled={!qrUrl}
-            data-testid="btn-download-qr"
-          >
-            <Download data-icon="inline-start" className="size-4" />
-            Unduh PNG
-          </Button>
-          <Button onClick={() => window.print()} disabled={!qrUrl} data-testid="btn-cetak-kartu">
-            <Printer data-icon="inline-start" className="size-4" />
-            Cetak Kartu
-          </Button>
+          <Button variant="outline" onClick={unduh} disabled={!qrUrl} data-testid="btn-unduh-qr"><Download data-icon="inline-start" className="size-4" /> Unduh</Button>
+          <Button onClick={() => window.print()} data-testid="btn-cetak-qr"><Printer data-icon="inline-start" className="size-4" /> Cetak</Button>
         </div>
       </DialogContent>
     </Dialog>

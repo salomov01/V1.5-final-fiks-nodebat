@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlarmClock, ClipboardList, Globe, History, LayoutDashboard, LogOut, Menu, Newspaper,
-  ReceiptText, ScanLine, Settings, Store,
+  ClipboardList, Globe, LayoutDashboard, LogOut, Menu, Newspaper,
+  ReceiptText, ScanLine, Settings, Store, Users,
 } from "lucide-react";
 import logoDesa from "@/assets/logo-desa.svg";
 import { apiGet } from "@/services/api";
@@ -11,22 +11,21 @@ import { BRANDING } from "@/config";
 import { endSession } from "@/services/session";
 import { ROLE_LABEL, useAuth } from "@/hooks/useAuth";
 import { initials } from "@/utils/format";
-import type { Payment, Pendaftaran } from "@/types";
+import type { Sewa } from "@/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-// Menu sidebar admin. `superOnly` = hanya tampil untuk Super Admin.
+// Menu sidebar admin (urutan baku). Info Pasar khusus Super Admin.
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/dashboard/lapak", label: "Pendataan Lapak", icon: Store },
-  { to: "/dashboard/pendaftaran", label: "Pendaftaran & Katalog", icon: ClipboardList, badge: "daftar" },
-  { to: "/dashboard/pembayaran", label: "Pembayaran", icon: ReceiptText, badge: "bayar" },
-  { to: "/dashboard/tunggakan", label: "Rekap Tunggakan", icon: AlarmClock },
+  { to: "/dashboard/pedagang", label: "Data Pedagang", icon: Users },
+  { to: "/dashboard/lapak", label: "Data Lapak dan Iuran", icon: Store },
+  { to: "/dashboard/pendaftaran", label: "Pendaftaran Lapak", icon: ClipboardList, badge: "daftar" },
+  { to: "/dashboard/pembayaran", label: "Pembayaran", icon: ReceiptText },
   { to: "/dashboard/scan-qr", label: "Pindai QR", icon: ScanLine },
-  { to: "/dashboard/riwayat", label: "Riwayat Aktivitas", icon: History },
   { to: "/dashboard/info-pasar", label: "Info Pasar", icon: Newspaper, superOnly: true },
-  { to: "/dashboard/pengaturan", label: "Pengaturan", icon: Settings },
+  { to: "/dashboard/pengaturan", label: "Settings", icon: Settings },
 ];
 
 function Brand() {
@@ -57,7 +56,7 @@ function SidebarNav({ counts, onNavigate }: { counts: Record<string, number>; on
           <item.icon className="size-4 shrink-0" />
           <span className="flex-1">{item.label}</span>
           {item.badge && counts[item.badge] > 0 && (
-            <span data-testid={item.badge === "bayar" ? "badge-menunggu-konfirmasi" : "badge-pendaftaran-baru"}
+            <span data-testid="badge-pendaftaran-baru"
               className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-semibold text-slate-900">
               {counts[item.badge]}
             </span>
@@ -89,9 +88,8 @@ function ClockWita() {
 export default function AppShell({ children }: { children: ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
   const { me } = useAuth();
-  const { data: pending } = useQuery({ queryKey: ["payments", "pending"], queryFn: () => apiGet<Payment[]>("/payments?status=menunggu"), retry: false });
-  const { data: daftarBaru } = useQuery({ queryKey: ["pendaftaran", "baru"], queryFn: () => apiGet<Pendaftaran[]>("/pendaftaran?status=baru"), retry: false });
-  const counts = { bayar: pending?.length ?? 0, daftar: daftarBaru?.length ?? 0 };
+  const { data: menunggu } = useQuery({ queryKey: ["sewa", "menunggu"], queryFn: () => apiGet<Sewa[]>("/sewa?status=menunggu"), retry: false });
+  const counts: Record<string, number> = { daftar: menunggu?.length ?? 0 };
 
   return (
     <Sheet open={navOpen} onOpenChange={setNavOpen}>
