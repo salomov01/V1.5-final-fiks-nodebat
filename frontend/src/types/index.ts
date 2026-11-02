@@ -89,6 +89,13 @@ export interface Payment {
   created_at: string;
 }
 
+export interface Kuitansi {
+  payment: Payment;
+  no_hp: string;
+  alamat: string;
+  sisa_sewa: number | null;
+}
+
 export interface PaymentList {
   items: Payment[];
   total_sewa: number | null; // null untuk Staf Pemungut Iuran

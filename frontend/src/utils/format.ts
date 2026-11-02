@@ -25,6 +25,12 @@ export function initials(name: string): string {
   return letters || "P";
 }
 
+/** "0812-345" / "+62812" -> "62812345" untuk tautan wa.me ("" bila kosong). */
+export function nomorWA(hp: string): string {
+  const d = hp.replace(/\D/g, "");
+  return d.startsWith("0") ? `62${d.slice(1)}` : d;
+}
+
 /** Tanggal hari ini (zona pasar) format YYYY-MM-DD. */
 export function todayISO(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: BRANDING.zonaWaktu }).format(new Date());

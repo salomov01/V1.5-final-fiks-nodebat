@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileSpreadsheet, FileText, Trash2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Receipt, Trash2 } from "lucide-react";
+import { KuitansiDialog } from "@/components/pembayaran/KuitansiDialog";
 import { apiDelete, apiGet } from "@/services/api";
 import { errDetail } from "@/utils/errors";
 import { formatDateID, formatRupiah, todayISO } from "@/utils/format";
@@ -33,6 +34,7 @@ export default function Pembayaran() {
   const [periode, setPeriode] = useState("bulanan");
   const [tanggal, setTanggal] = useState(todayISO());
   const [jenis, setJenis] = useState("");
+  const [kuitansi, setKuitansi] = useState<string | null>(null);
   const qs = new URLSearchParams({ periode, tanggal, ...(jenis ? { jenis } : {}) }).toString();
   const { data } = useQuery({ queryKey: ["payments", qs], queryFn: () => apiGet<PaymentList>(`/payments?${qs}`) });
   const hapus = useMutation({
@@ -93,12 +95,15 @@ export default function Pembayaran() {
                 <TableCell>{p.penagih}</TableCell>
                 <TableCell>{formatDateID(p.tanggal)}</TableCell>
                 <TableCell><span className="text-xs font-semibold text-brand">Lunas</span></TableCell>
-                <TableCell>{isSuper && <Button size="icon-sm" variant="ghost" onClick={() => confirm("Hapus pembayaran ini?") && hapus.mutate(p.id)} data-testid={`btn-hapus-bayar-${p.id}`}><Trash2 className="size-4 text-red-600" /></Button>}</TableCell>
+                <TableCell className="whitespace-nowrap">
+                  <Button size="icon-sm" variant="ghost" title="Kuitansi" onClick={() => setKuitansi(p.id)} data-testid={`btn-kuitansi-${p.id}`}><Receipt className="size-4 text-brand" /></Button>
+                  {isSuper && <Button size="icon-sm" variant="ghost" onClick={() => confirm("Hapus pembayaran ini?") && hapus.mutate(p.id)} data-testid={`btn-hapus-bayar-${p.id}`}><Trash2 className="size-4 text-red-600" /></Button>}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+      <KuitansiDialog paymentId={kuitansi} onClose={() => setKuitansi(null)} />
     </div>
   );
 }

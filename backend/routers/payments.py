@@ -116,6 +116,25 @@ async def bayar_sewa(input: BayarInput, me: Principal = Depends(get_principal)):
     return await _simpan("sewa", s, jumlah, f"{s.mulai} s/d {s.selesai}", me)
 
 
+class Kuitansi(BaseModel):
+    payment: Payment
+    no_hp: str
+    alamat: str
+    sisa_sewa: int | None
+
+
+@router.get("/payments/{pid}/kuitansi", response_model=Kuitansi)
+async def kuitansi(pid: str):
+    d = await db.payments.find_one({"id": pid})
+    if not d:
+        raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
+    p = Payment(**to_aware(d, "created_at"))
+    ped = await db.pedagang.find_one({"id": p.pedagang_id}) or {}
+    s = await db.sewa.find_one({"id": p.sewa_id})
+    sisa = (await sewa_out(s)).sisa if s else None
+    return Kuitansi(payment=p, no_hp=ped.get("no_hp", ""), alamat=ped.get("alamat", ""), sisa_sewa=sisa)
+
+
 @router.delete("/payments/{pid}")
 async def delete_payment(pid: str, actor: str = Depends(require_super)):
     d = await db.payments.find_one_and_delete({"id": pid})

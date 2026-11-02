@@ -74,6 +74,13 @@ bayarRouter.post("/payments/sewa", S, wrap(async (req, res) => {
   if (s.sisa <= 0) throw new HttpError(409, "Sewa lapak sudah lunas");
   res.status(201).json(await simpan("sewa", s, Math.min(req.body.jumlah || s.sisa, s.sisa), `${s.mulai} s/d ${s.selesai}`, req.user));
 }));
+bayarRouter.get("/payments/:id/kuitansi", S, wrap(async (req, res) => {
+  const d = await col("payments").findOne({ id: req.params.id });
+  if (!d) throw new HttpError(404, "Pembayaran tidak ditemukan");
+  const ped = (await col("pedagang").findOne({ id: d.pedagang_id })) || {};
+  const s = await col("sewa").findOne({ id: d.sewa_id });
+  res.json({ payment: clean(d), no_hp: ped.no_hp || "", alamat: ped.alamat || "", sisa_sewa: s ? (await sewaOut(s)).sisa : null });
+}));
 bayarRouter.delete("/payments/:id", SUPER, wrap(async (req, res) => {
   const d = await col("payments").findOneAndDelete({ id: req.params.id });
   if (!d) throw new HttpError(404, "Pembayaran tidak ditemukan");

@@ -7,7 +7,8 @@ import { apiGet, apiPost } from "@/services/api";
 import { errDetail } from "@/utils/errors";
 import { formatDateID, formatRupiah } from "@/utils/format";
 import { useAuth } from "@/hooks/useAuth";
-import type { ScanResult } from "@/types";
+import type { Payment, ScanResult } from "@/types";
+import { KuitansiDialog } from "@/components/pembayaran/KuitansiDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -21,6 +22,7 @@ export default function ScanQr() {
   const [scanning, setScanning] = useState(false);
   const [manual, setManual] = useState("");
   const [hasil, setHasil] = useState<ScanResult | null>(null);
+  const [kuitansi, setKuitansi] = useState<string | null>(null);
 
   const stop = async () => {
     const s = scannerRef.current;
@@ -57,9 +59,10 @@ export default function ScanQr() {
   };
 
   const bayar = useMutation({
-    mutationFn: ({ jenis, sewa_id }: { jenis: "iuran" | "sewa"; sewa_id: string }) => apiPost(`/payments/${jenis}`, { sewa_id }),
-    onSuccess: async (_d, v) => {
+    mutationFn: ({ jenis, sewa_id }: { jenis: "iuran" | "sewa"; sewa_id: string }) => apiPost<Payment>(`/payments/${jenis}`, { sewa_id }),
+    onSuccess: async (d, v) => {
       toast.success(v.jenis === "iuran" ? "Iuran hari ini LUNAS" : "Sewa lapak LUNAS");
+      setKuitansi(d.id);
       for (const k of ["payments", "dashboard", "sewa"]) void qc.invalidateQueries({ queryKey: [k] });
       if (hasil) setHasil(await apiGet<ScanResult>(`/scan/${hasil.pedagang.user_id}`));
     },
@@ -117,6 +120,7 @@ export default function ScanQr() {
           )}
         </div>
       </div>
+      <KuitansiDialog paymentId={kuitansi} onClose={() => setKuitansi(null)} />
     </div>
   );
 }

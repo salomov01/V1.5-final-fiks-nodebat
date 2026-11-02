@@ -140,6 +140,7 @@
 
 /* Cetak: hanya .print-area (kuitansi / kartu QR) yang tampil di kertas */
 @media print {
+    @page { size: A5; margin: 10mm; }
     body * {
         visibility: hidden !important;
     }
