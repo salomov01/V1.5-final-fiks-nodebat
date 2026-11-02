@@ -34,7 +34,7 @@ export const BRANDING = {
  * Ganti `whatsapp` dengan nomor WA admin asli, format 62xxxxxxxxxx (tanpa + / spasi).
  */
 export const KONTAK_ADMIN = {
-  whatsapp: "6281234567890",
+  whatsapp: "6281991615723",
 };
 
 /**
