@@ -53,7 +53,7 @@ async function sewaAktif(id) {
 }
 async function simpan(jenis, s, jumlah, periode, user) {
   const p = { id: newId(), jenis, sewa_id: s.id, pedagang_id: s.pedagang_id || "", user_id: s.user_id || "", nama: s.nama, lapak_nama: s.lapak_nama,
-    periode, jumlah, tanggal: todayISO(), penagih: user.nama, status: "lunas", created_at: new Date() }; // penagih = akun login
+    periode, jumlah, tanggal: todayISO(), penagih: user.nama, sisa_setelah: jenis === "sewa" ? s.sisa - jumlah : null, status: "lunas", created_at: new Date() }; // penagih = akun login
   await col("payments").insertOne(p);
   await logActivity(user.username, "buat", "pembayaran", p.id, `${jenis} ${s.nama}`, `Rp${jumlah}`);
   return clean(p);
@@ -78,8 +78,10 @@ bayarRouter.get("/payments/:id/kuitansi", S, wrap(async (req, res) => {
   const d = await col("payments").findOne({ id: req.params.id });
   if (!d) throw new HttpError(404, "Pembayaran tidak ditemukan");
   const ped = (await col("pedagang").findOne({ id: d.pedagang_id })) || {};
-  const s = await col("sewa").findOne({ id: d.sewa_id });
-  res.json({ payment: clean(d), no_hp: ped.no_hp || "", alamat: ped.alamat || "", sisa_sewa: s ? (await sewaOut(s)).sisa : null });
+  let sisa = d.sisa_setelah ?? null;
+  const s = sisa === null && d.jenis === "sewa" ? await col("sewa").findOne({ id: d.sewa_id }) : null;
+  if (s) sisa = (await sewaOut(s)).sisa;
+  res.json({ payment: clean(d), no_hp: ped.no_hp || "", alamat: ped.alamat || "", sisa_sewa: sisa });
 }));
 bayarRouter.delete("/payments/:id", SUPER, wrap(async (req, res) => {
   const d = await col("payments").findOneAndDelete({ id: req.params.id });

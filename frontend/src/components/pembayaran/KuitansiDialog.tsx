@@ -8,6 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const noKuitansi = (k: Kuitansi) => `KW-${k.payment.tanggal.replaceAll("-", "")}-${k.payment.id.slice(0, 6).toUpperCase()}`;
+const fmtPeriode = (p: string) => p.replace(/\d{4}-\d{2}-\d{2}/g, formatDateID);
 const labelJenis = (j: string) => (j === "sewa" ? "Sewa Lapak" : "Iuran Harian");
 
 function pesanWA(k: Kuitansi): string {
@@ -15,7 +16,7 @@ function pesanWA(k: Kuitansi): string {
   return [
     `*KUITANSI PEMBAYARAN*`, `${BRANDING.namaPasar} — ${BRANDING.namaDesa}`, ``,
     `No: ${noKuitansi(k)}`, `Tanggal: ${formatDateID(p.tanggal)}`, `Nama: ${p.nama} (${p.user_id})`,
-    `Lapak: ${p.lapak_nama}`, `Pembayaran: ${labelJenis(p.jenis)}`, `Periode: ${p.periode}`,
+    `Lapak: ${p.lapak_nama}`, `Pembayaran: ${labelJenis(p.jenis)}`, `Periode: ${fmtPeriode(p.periode)}`,
     `Jumlah: *${formatRupiah(p.jumlah)}*`, `Status: LUNAS`, `Penagih: ${p.penagih}`,
     ...(p.jenis === "sewa" && k.sisa_sewa !== null ? [`Sisa sewa: ${formatRupiah(k.sisa_sewa)}`] : []),
     ``, `Terima kasih.`,
@@ -39,7 +40,7 @@ function Lembar({ k }: { k: Kuitansi }) {
         <Baris l="Diterima dari" v={`${p.nama} (${p.user_id})`} id="kuitansi-nama" />
         <Baris l="Lapak" v={p.lapak_nama} />
         <Baris l="Untuk pembayaran" v={labelJenis(p.jenis)} id="kuitansi-jenis" />
-        <Baris l="Periode" v={p.periode} />
+        <Baris l="Periode" v={fmtPeriode(p.periode)} />
         {p.jenis === "sewa" && k.sisa_sewa !== null && <Baris l="Sisa sewa" v={formatRupiah(k.sisa_sewa)} />}
         <Baris l="Penagih" v={p.penagih} />
       </div>

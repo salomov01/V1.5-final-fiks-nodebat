@@ -1,0 +1,37 @@
+{
+  "summary": "Tested the Kuitansi Pembayaran feature on the public URL. Backend: new tests/test_kuitansi.py passed 5/5. GET /api/payments/{id}/kuitansi returns exactly {payment, no_hp, alamat, sisa_sewa}, gives 404 for an unknown or deleted id and 401 without a session, and works for both staff and super admin. _id is not leaked. Regression of test_pasar_flow plus test_kuitansi: 21/21 passed (iuran 409, RBAC 403, exports, staff totals null). The Node copy passes node --check. Frontend as staff on /dashboard/scan-qr: Bayar Iuran opens the kuitansi dialog automatically (KW-20261102-25F04B, nama 'TEST_UiHp (25-406)', 'Iuran Harian', 'Rp 4.000', LUNAS stamp visible). Bayar Sewa Lapak opens it with 'Sewa Lapak', Rp 100.000 and a 'Sisa sewa' line; the Bayar Sewa button then disappears and the iuran button changes to disabled 'Iuran hari ini lunas'. btn-cetak-kuitansi calls window.print. btn-wa-kuitansi is an <a target=_blank> with href https://wa.me/6281234567890?text=..., and the decoded text contains nama, jumlah and 'Status: LUNAS'. For a pedagang without no_hp, kuitansi-tanpa-hp is shown and the link is wa.me/?text=. /dashboard/pembayaran: staff sees btn-kuitansi on every row (3) with 0 hapus buttons, no export and no ringkasan; reprint works. Super admin sees kuitansi and hapus buttons, and reprint works. One print-layout defect was found (see ui_bugs).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/payments/{id}/kuitansi", "issue": "sisa_sewa is the CURRENT remaining balance of the sewa, not the balance right after that payment. Reprinting an older partial sewa payment shows a lower or zero sisa than it showed at the time. Fix: store sisa_setelah on the Payment when it is saved (in _simpan) and return that value."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "KuitansiDialog print (@media print in index.css)", "issue": "The .print-area is position:absolute top:0/left:0, but its ancestor DialogContent is position:fixed with translate(-50%,-50%), so the receipt is positioned relative to the centred dialog, not the page. Emulated print at A5 size (559x794px): the receipt starts at y=320px and is about 526px tall, so the bottom part (Jumlah/LUNAS stamp/signature) runs past the A5 page and is clipped or split. Fix: in @media print reset the dialog container, e.g. [data-slot=dialog-content]{position:static!important;transform:none!important;max-height:none!important;overflow:visible!important;border:0;box-shadow:none} and hide the overlay. Alternatively render the print sheet through a portal directly under body.", "selector": "#kuitansi-print", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Kuitansi dialog", "issues": ["Iuran receipts show Periode as raw ISO '2026-11-02', and sewa receipts show '2026-11-02 s/d 2026-11-11'. Consider formatDateID for consistency with 'Tanggal'.", "The 'Bendahara Pasar Adat' caption and the signature line sit slightly misaligned to the right of the LUNAS stamp, which is minor."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_kuitansi.py", "/app/backend/tests/kuitansi_ui_setup.py", "/app/backend/tests/test_pasar_flow.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix the print CSS so the receipt prints from the top of the A5 page (neutralise the fixed/transform of DialogContent in @media print)",
+    "Optional: persist sisa-after-payment on the Payment so reprints show the historical sisa",
+    "Optional: format Periode dates in the receipt and the WA text with formatDateID"
+  ],
+  "critical_code_review_comments": [
+    "KuitansiDialog: the useQuery has no error state. A 404 (e.g. a payment deleted meanwhile) shows 'Memuat kuitansi…' forever. Handle isError.",
+    "index.css @media print: the absolute positioning is relative to the transformed dialog, so it is not page-anchored (see the bug above).",
+    "routers/payments.py kuitansi: correct route order (before DELETE) and the RBAC is fine (any session). sisa is computed live (see the minor issue).",
+    "test_pasar_flow.py test_create_next_id_dup_rbac assumes counter == count+1. It fails if pedagang were created and deleted before the run, so run seed.py first. This is a test fragility, not an app bug."
+  ],
+  "updated_files": ["/app/backend/tests/test_kuitansi.py", "/app/backend/tests/kuitansi_ui_setup.py"],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "95% (all requested flows pass; print layout offset defect)"},
+  "test_credentials": "pengelola/jimbaran2026, pemungut1/pemungut123 from /app/memory/test_credentials.md - both work. The session cookie is HttpOnly, Secure, SameSite=None.",
+  "seed_data_creation": "Created TEST_ lapak/pedagang/sewa/payments and then cleaned them up. Finally ran python seed.py: 22 pedagang, 21 lapak, 0 payments.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The scan route is /dashboard/scan-qr (not /dashboard/scan). The login testids are input-username, input-password and btn-login. UI data setup: BACKEND_URL=$REACT_APP_BACKEND_URL python tests/kuitansi_ui_setup.py (prints uid/sid), and add --cleanup afterwards. To verify print, set the viewport to 559x794, call emulate_media('print') and check the #kuitansi-print rect y is about 0. Run seed.py before test_pasar_flow."
+}

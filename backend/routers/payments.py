@@ -86,7 +86,7 @@ async def _sewa_aktif(sid: str) -> SewaOut:
 async def _simpan(jenis: str, s: SewaOut, jumlah: int, periode: str, me: Principal) -> Payment:
     p = Payment(jenis=jenis, sewa_id=s.id, pedagang_id=s.pedagang_id or "", user_id=s.user_id or "", nama=s.nama,
                 lapak_nama=s.lapak_nama, periode=periode, jumlah=jumlah, tanggal=today_iso(),
-                penagih=me.nama)  # penagih = akun yang login (readonly di UI)
+                penagih=me.nama, sisa_setelah=s.sisa - jumlah if jenis == "sewa" else None)  # penagih = akun yang login (readonly di UI)
     await db.payments.insert_one(p.model_dump())
     await log_activity(me.username, "buat", "pembayaran", p.id, f"{jenis} {s.nama}", f"Rp{jumlah}")
     return p
@@ -130,8 +130,9 @@ async def kuitansi(pid: str):
         raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
     p = Payment(**to_aware(d, "created_at"))
     ped = await db.pedagang.find_one({"id": p.pedagang_id}) or {}
-    s = await db.sewa.find_one({"id": p.sewa_id})
-    sisa = (await sewa_out(s)).sisa if s else None
+    sisa = p.sisa_setelah
+    if sisa is None and p.jenis == "sewa" and (s := await db.sewa.find_one({"id": p.sewa_id})):
+        sisa = (await sewa_out(s)).sisa
     return Kuitansi(payment=p, no_hp=ped.get("no_hp", ""), alamat=ped.get("alamat", ""), sisa_sewa=sisa)
 
 
