@@ -69,7 +69,7 @@ async def scan(user_id: str):
     p = await get_pedagang({"user_id": user_id.strip()})
     today = today_iso()
     hasil = []
-    async for d in db.sewa.find({"pedagang_id": p.id, "status": "aktif", "selesai": {"$gte": today}}).sort("mulai", 1):
+    async for d in db.sewa.find({"pedagang_id": p.id, "status": "aktif", "mulai": {"$lte": today}, "selesai": {"$gte": today}}).sort("mulai", 1):
         s = await sewa_out(d)
         lunas = bool(await db.payments.find_one({"sewa_id": s.id, "jenis": "iuran", "tanggal": today}))
         hasil.append(ScanSewa(**s.model_dump(), iuran_hari_ini_lunas=lunas))
@@ -96,6 +96,8 @@ async def _simpan(jenis: str, s: SewaOut, jumlah: int, periode: str, me: Princip
 async def bayar_iuran(input: BayarInput, me: Principal = Depends(get_principal)):
     s = await _sewa_aktif(input.sewa_id)
     today = today_iso()
+    if not s.mulai <= today <= s.selesai:
+        raise HTTPException(status_code=422, detail="Masa sewa belum dimulai atau sudah berakhir")
     if s.iuran <= 0:
         raise HTTPException(status_code=422, detail="Lapak ini tidak dikenai iuran")
     # Unik per sewa per hari: kunci atomik via upsert penanda.

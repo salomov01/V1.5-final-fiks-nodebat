@@ -1,0 +1,49 @@
+{
+  "summary": "Full regression of the Jimbaran data-model rewrite (pedagang/lapak/sewa/payments/laporan/users), tested against the PUBLIC URL. Backend: new tests/test_pasar_flow.py passed 16/16, and the old login/change-password tests passed 5/5. Covered: 22 seeded pedagang with user_id 01-009; the next ID 23-<last3 NIK> with sequence = count+1; duplicate NIK 409; staff 403 on PATCH/DELETE pedagang, lapak and foto, on DELETE payments/sewa/users, and on both exports. Lapak CRUD with duplicate name 409. lapak-kosong excludes rented lapak. Admin assign total=round(harga*days/30) (450k x 10 days = 150k); overlap 409; end date before start 422. Public booking with an existing pedagang or a new one (nik not returned); start date in the past 422; staff terima creates a pedagang with the NIK suffix and auto-rejects overlapping bookings; tolak works. Scan returns sisa and iuran_hari_ini_lunas; iuran can be paid once per day (2nd 409) and deleting the payment releases the lock; sewa paid in full (2nd 409); penagih = logged-in user's nama; payments totals are null for staff; harian/bulanan/tahunan plus jenis filters work. xlsx row 5 has the exact 8 headers; PDF works for all 3 periods. Deleting a user works; deleting self gives 409. Frontend: public /informasi-lapak (only filter-semua, harga/iuran on cards, dialog with search -> opsi-pedagang-01-009, new pedagang fields, total 1.2M x 15 days = Rp 600.000, sewa-sukses with wa.me link, mobile 390px with no overflow). Super Admin: sidebar order and labels exact (Settings), Data Pedagang add -> 27-456 with toast, QR dialog qr-user-id, inline edit saved, search. Data Lapak add, assign in admin mode (no btn-pedagang-baru) -> status shows penyewa and Tetapkan disappears, inline edit saved. Pendaftaran tabs; terima of the public new-pedagang booking -> aktif with User ID 28-777. Pembayaran ringkasan totals, filters, tanggal, jenis; Export Excel and PDF downloaded. Settings: deleting a user via confirm works, no delete button on own account. Staff: no nav-info-pasar (direct URL redirects), no inline edit/delete buttons, Tetapkan and add forms still available, no export, no ringkasan, no hapus-bayar or hapus-sewa, no user manager. Pindai QR as staff: penagih readonly 'I Made Pemungut'; Bayar Iuran -> disabled 'Iuran hari ini lunas'; Bayar Sewa Lapak -> button gone, 'sewa lunas', still hidden after rescan; unknown ID shows a toast.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/pedagang?q=(", "issue": "Returns 500: the admin search passes q straight into a Mongo $regex without re.escape (the public endpoint does escape). Fix: use re.escape(q) in routers/pedagang.py list_pedagang."},
+      {"endpoint": "POST /api/payments/iuran", "issue": "A sewa whose mulai is in the future can already be paid. /scan lists sewa with selesai>=today but does not check mulai<=today, so a future rental shows a 'Bayar Iuran' button and a payment is recorded (reproduced: sewa starting today+5 -> 201). Fix: filter mulai<=today in scan, or reject in bayar_iuran."},
+      {"endpoint": "GET /api/lapak & /api/publik/lapak-kosong", "issue": "_terisi() treats any aktif sewa with selesai>=today as occupied, including future-only rentals. A lapak booked from next week shows 'terisi' now, has no Tetapkan button and is hidden from the public catalog, even though it is free today. Probably acceptable, but confirm this is intended."},
+      {"endpoint": "PATCH /api/lapak/{id} (iuran)", "issue": "Sewa stores a snapshot of iuran/harga. After the iuran was edited from 5.000 to 7.000, scan and payment still charged Rp 5.000 for the existing sewa. Confirm whether existing sewa should follow the new iuran."},
+      {"endpoint": "POST /api/sewa/{id}/terima", "issue": "buat_pedagang runs before the conditional status update. If the update loses a race (409), the newly created pedagang is left orphaned. It also uses nik fallback '000' if nik is missing, and a duplicate-NIK 409 blocks confirmation with no way to link the booking to the existing pedagang."},
+      {"endpoint": "DELETE /api/sewa/{id}", "issue": "Deletes the sewa but leaves its payments and iuran_lock rows, so the reports keep rows pointing to a deleted sewa."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Sonner toast (bottom-right)", "issue": "The toast sits on top of the last table row's action buttons (Tetapkan/QR) for several seconds after an add, which intercepts clicks on those buttons. Consider top-right placement or bottom padding on tables.", "selector": "section[aria-label='Notifications alt+T']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "SewaLapakDialog / Pembayaran filter-tanggal", "issues": ["Uses the native browser date picker (input type=date, mm/dd/yyyy locale) instead of the shadcn Calendar/DatePicker"]},
+      {"screen": "Settings (Super Admin)", "issues": ["Unbalanced grid: the left column of the first row has a large empty gap under the password warning, and 'Informasi Akun' drops to the second row"]},
+      {"screen": "Pindai QR result", "issues": ["Shows '081277778888 •' with a trailing bullet when alamat is empty"]},
+      {"screen": "Data Lapak", "issues": ["For a future sewa, the status shows only 'nama s.d. tgl' without the start date"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_pasar_flow.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Escape the regex in GET /api/pedagang q (currently 500 on special characters)",
+    "Block iuran payment / hide Bayar Iuran for sewa that has not started (mulai > today)",
+    "Decide whether future-only sewa should mark a lapak as terisi and hide it from the public catalog",
+    "Make terima_sewa pedagang creation safe (create after a successful status flip, or roll back on failure)",
+    "Optionally cascade or flag payments when a sewa is deleted",
+    "Optional UI polish: shadcn date picker, toast placement, Settings grid gap"
+  ],
+  "critical_code_review_comments": [
+    "routers/pedagang.py list_pedagang: unescaped user regex leads to 500 and possible ReDoS",
+    "routers/payments.py scan/bayar_iuran: no mulai<=today check",
+    "routers/katalog.py terima_sewa: side effect (buat_pedagang increments the counter and inserts) happens before the atomic status check",
+    "routers/katalog.py delete_sewa: no cleanup of payments or iuran_lock",
+    "seed.py correctly resets the counter to len(pedagang)=22"
+  ],
+  "updated_files": ["/app/backend/tests/test_pasar_flow.py"],
+  "success_rate": {"backend": "100% (21/21 pytest); 1 extra edge case found (q regex 500)", "frontend": "100% of requested flows passed"},
+  "test_credentials": "pengelola/jimbaran2026 (super), pemungut1/pemungut123 (staff), from /app/memory/test_credentials.md - both work",
+  "seed_data_creation": "Test data created during the run was wiped: ran `python seed.py` (22 pedagang, 21 lapak, 0 sewa, 0 payments, counter=22), deleted test_* users, cleared login_attempts. Users remaining: pengelola, pemungut1, wiwid, wiwid123 (the wiwid accounts were not created by this agent and were left alone).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && BACKEND_URL=$REACT_APP_BACKEND_URL python -m pytest tests/test_pasar_flow.py -q -n0 -p no:randomly, then python seed.py to reset. The pod date is 2026-10-29 (APP_TZ Asia/Makassar). The toast overlays the last table row - wait about 4s before clicking it, or scroll. Settings delete uses window.confirm, so accept page dialogs in Playwright. The Pindai QR penagih input appears only after a scan."
+}

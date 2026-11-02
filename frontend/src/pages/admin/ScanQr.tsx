@@ -89,7 +89,7 @@ export default function ScanQr() {
               <div>
                 <p className="font-mono text-sm font-bold text-brand" data-testid="scan-user-id">{hasil.pedagang.user_id}</p>
                 <p className="text-xl font-bold" data-testid="scan-nama">{hasil.pedagang.nama}</p>
-                <p className="text-xs text-muted-foreground">{hasil.pedagang.no_hp} • {hasil.pedagang.alamat}</p>
+                <p className="text-xs text-muted-foreground">{[hasil.pedagang.no_hp, hasil.pedagang.alamat].filter(Boolean).join(" • ")}</p>
               </div>
               {/* Nama penagih otomatis dari akun login (readonly) */}
               <div className="grid gap-1">

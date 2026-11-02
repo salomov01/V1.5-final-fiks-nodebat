@@ -1,5 +1,6 @@
 """Data Pedagang: CRUD + User ID otomatis [NO_URUT]-[3 digit akhir KTP]."""
 
+import re
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -41,7 +42,8 @@ async def get_pedagang(query: dict) -> Pedagang:
 
 @router.get("", response_model=List[Pedagang])
 async def list_pedagang(q: str = ""):
-    query = {"$or": [{"nama": {"$regex": q, "$options": "i"}}, {"user_id": {"$regex": q}}]} if q else {}
+    rx = re.escape(q)
+    query = {"$or": [{"nama": {"$regex": rx, "$options": "i"}}, {"user_id": {"$regex": rx}}]} if q else {}
     docs = await db.pedagang.find(query).sort("created_at", 1).to_list(5000)
     return [Pedagang(**to_aware(d, "created_at")) for d in docs]
 
@@ -74,7 +76,6 @@ async def delete_pedagang(pid: str, actor: str = Depends(require_super)):
 @public_router.get("/pedagang", response_model=List[PedagangRingkas])
 async def cari_pedagang_publik(q: str = Query(min_length=2, max_length=60)):
     """Pencarian akun pedagang untuk form sewa — hanya nama & User ID."""
-    import re
     docs = await db.pedagang.find(
         {"aktif": True, "nama": {"$regex": re.escape(q), "$options": "i"}}, {"id": 1, "user_id": 1, "nama": 1}
     ).limit(10).to_list(10)

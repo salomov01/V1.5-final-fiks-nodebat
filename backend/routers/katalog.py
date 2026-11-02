@@ -47,9 +47,10 @@ async def _lapak(lid: str) -> Lapak:
 
 
 async def _terisi() -> dict[str, dict]:
-    """lapak_id -> sewa aktif yang belum berakhir."""
+    """lapak_id -> sewa aktif yang sedang berjalan hari ini (booking masa depan tidak menandai terisi)."""
     hasil: dict[str, dict] = {}
-    async for s in db.sewa.find({"status": "aktif", "selesai": {"$gte": today_iso()}}):
+    today = today_iso()
+    async for s in db.sewa.find({"status": "aktif", "mulai": {"$lte": today}, "selesai": {"$gte": today}}):
         if s["selesai"] > hasil.get(s["lapak_id"], {}).get("selesai", ""):
             hasil[s["lapak_id"]] = s
     return hasil
@@ -228,13 +229,17 @@ async def terima_sewa(sid: str, actor: str = Depends(require_session)):
     """Konfirmasi oleh Super Admin / Staf Pemungut Iuran."""
     doc = await _sewa_menunggu(sid)
     await _cek_kosong(doc["lapak_id"], doc["mulai"], doc["selesai"])
-    changes = {"status": "aktif"}
-    if not doc.get("pedagang_id"):
-        p = await buat_pedagang(PedagangInput(nama=doc["nama"], nik=doc.get("nik") or "000", no_hp=doc.get("no_hp", "")), actor)
-        changes |= {"pedagang_id": p.id, "user_id": p.user_id}
-    res = await db.sewa.update_one({"id": sid, "status": "menunggu"}, {"$set": changes})
+    # Ambil alih status dulu (atomik) agar pedagang tidak dibuat ganda saat klik bersamaan.
+    res = await db.sewa.update_one({"id": sid, "status": "menunggu"}, {"$set": {"status": "aktif"}})
     if not res.modified_count:
         raise HTTPException(status_code=409, detail="Pendaftaran sudah diproses")
+    if not doc.get("pedagang_id"):
+        try:
+            p = await buat_pedagang(PedagangInput(nama=doc["nama"], nik=doc.get("nik") or "000", no_hp=doc.get("no_hp", "")), actor)
+        except HTTPException:
+            await db.sewa.update_one({"id": sid}, {"$set": {"status": "menunggu"}})  # batalkan
+            raise
+        await db.sewa.update_one({"id": sid}, {"$set": {"pedagang_id": p.id, "user_id": p.user_id}})
     # Booking lain yang bentrok di lapak yang sama otomatis ditolak.
     await db.sewa.update_many({"lapak_id": doc["lapak_id"], "status": "menunggu", "mulai": {"$lte": doc["selesai"]},
                                "selesai": {"$gte": doc["mulai"]}}, {"$set": {"status": "ditolak"}})

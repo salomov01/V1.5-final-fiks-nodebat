@@ -1,153 +1,140 @@
 # Bindes2026 — Website & Aplikasi Lapak Pasar Desa Adat Jimbaran
 
-Website publik (Home, Info Pasar, Informasi Lapak) + panel pengelola (lapak, pembayaran, scan QR,
-tunggakan, ekspor Excel) dengan 2 tingkat admin.
+Website publik (Home, Info Pasar, Informasi Lapak) + panel pengelola (pedagang, lapak & iuran, sewa,
+pembayaran, scan QR) dengan 2 tingkat admin.
 
-Stack: **FastAPI + MongoDB** (backend) & **Vite + React + TypeScript + Tailwind** (frontend).
-
----
-
-## 1. Cara Mengedit Konten Dashboard (Halaman Home publik)
-
-Semua teks halaman Home dikumpulkan dalam **satu file**: `frontend/src/content/beranda.ts`
-
-| Yang ingin diubah | Lokasi |
-|---|---|
-| Judul besar Hero ("Desa Adat Jimbaran") | `src/content/beranda.ts` baris **8** (`judul`) |
-| Deskripsi di bawah judul Hero | `src/content/beranda.ts` baris **9** (`subjudul`) |
-| Judul "Sejarah Desa Adat Jimbaran" | `src/content/beranda.ts` baris **14** |
-| Paragraf sejarah desa | `src/content/beranda.ts` baris **16–20** (array `paragraf`, 1 string = 1 paragraf) |
-| Judul "Sejarah Pasar Adat Jimbaran" | `src/content/beranda.ts` baris **24** |
-| Paragraf sejarah pasar | `src/content/beranda.ts` baris **26–30** |
-| Teks kecil "Om Swastiastu" & tombol Hero | `src/components/home/Hero.tsx` |
-| Tata letak section sejarah (foto kiri/kanan) | `src/components/home/SejarahSection.tsx` (prop `terbalik` di `src/pages/public/Home.tsx`) |
-| Menu Navbar (Home, Info Pasar, Informasi Lapak, Login) | `src/components/layout/Navbar.tsx` baris **8** (`MENU`) |
-| Teks footer "© 2026 Bina desa adat jimbaran..." | `src/components/layout/PublicLayout.tsx` baris **8** |
-| Nama desa/pasar, zona waktu, nomor WhatsApp admin | `src/config.ts` (`BRANDING`, `KONTAK_ADMIN`) |
-| Warna aksen hijau `#1E4E42` | `src/index.css` baris **11–15** (`--color-brand…`) dan `--primary` di `:root` |
-
-**Info Pasar & berita tidak perlu edit kode.** Login sebagai Super Admin, lalu buka menu
-**Info Pasar** (`/dashboard/info-pasar`) untuk mengatur jam buka/tutup, status (otomatis / paksa buka / paksa tutup),
-pengumuman, dan menambah/mengubah/menghapus berita.
+- **Frontend**: Vite + React + TypeScript + Tailwind (`frontend/`)
+- **Backend utama**: FastAPI + MongoDB (`backend/`) — dipakai di platform ini (preview & publish)
+- **Backend salinan Node.js**: Express + MongoDB (`backend-node/`) — API identik, untuk Vercel / Render / VPS
 
 ---
 
-## 2. Cara Mengganti Gambar/Foto
+## 1. ⭐ Cara Mengganti Nomor HP / WhatsApp Konfirmasi Sewa Lapak
 
-Semua gambar halaman publik ada di folder **`frontend/src/assets/`**:
+Saat pengunjung menekan **Sewa** di halaman *Informasi Lapak*, setelah formulir dikirim muncul tombol
+**"Kirim ke WhatsApp Admin"**. Nomor tujuannya diatur di **satu tempat saja**:
 
-| File | Dipakai di |
-|---|---|
-| `logo-desa.svg` | Logo di Navbar, sidebar admin, dan halaman login |
-| `hero-desa.jpg` | Latar Hero halaman Home |
-| `sejarah-desa.jpg` | Foto section Sejarah Desa |
-| `sejarah-pasar.jpg` | Foto section Sejarah Pasar |
+| File | Baris | Isi |
+|---|---|---|
+| `frontend/src/config.ts` | **37** | `whatsapp: "6281234567890",` |
 
-**Cara termudah (tanpa ubah kode):**
-1. Siapkan foto baru (disarankan JPG, lebar ±1400px, < 500 KB).
-2. Beri nama **persis sama** dengan file lama (mis. `sejarah-desa.jpg`).
-3. Timpa file lama di `frontend/src/assets/`.
-4. Build ulang frontend (`yarn build`) / tunggu hot-reload.
+Langkah:
+1. Buka `frontend/src/config.ts`, cari bagian **"2. NOMOR HP / WHATSAPP ADMIN UNTUK KONFIRMASI SEWA LAPAK"** (baris 32–38).
+2. Ganti `6281234567890` dengan nomor admin, format internasional **tanpa `+`, spasi, atau tanda hubung**.
+   Contoh: `0812-3456-7890` → `6281234567890`.
+3. Simpan, lalu build ulang frontend (`yarn build`) / tunggu hot-reload.
 
-**Jika nama file berbeda** (mis. `pura-desa.png`):
-1. Taruh file di `frontend/src/assets/`.
-2. Buka `frontend/src/content/beranda.ts` baris **3–5**, ubah path import, contoh:
-   `import sejarahDesaImg from "@/assets/pura-desa.png";`
-
-**Logo:** ganti `src/assets/logo-desa.svg` dengan logo resmi (boleh `.png` — lalu ubah import
-`logo-desa.svg` di `components/layout/Navbar.tsx`, `components/layout/AppShell.tsx`, dan `pages/Login.tsx`).
-
-**Foto lapak:** diunggah langsung dari panel admin (Pendaftaran & Katalog → tab Katalog Lapak).
-Foto contoh untuk lapak tanpa foto diatur di `src/config.ts` → `FOTO_CONTOH`.
+Isi pesan WhatsApp (nama, lapak, durasi, total sewa, kode booking, tautan konfirmasi) dapat diubah di
+`frontend/src/components/lapak/SewaLapakDialog.tsx` fungsi `waLink` (baris **18–29**).
 
 ---
 
-## 3. Struktur Folder Proyek
+## 2. Alur Sistem
 
-```
-backend/
-├── server.py              # Entry FastAPI, semua route diawali /api
-├── .env                   # MONGO_URL, DB_NAME, ADMIN_USERNAME/EMAIL/PASSWORD, APP_TZ, ...
-├── seed.py                # Isi data contoh (opsional)
-├── lib/                   # Helper: db, keamanan password, rate limit, storage foto, tanggal
-├── models/                # Model data (tenant, payment, katalog, dashboard, activity)
-├── routers/
-│   ├── auth.py            # Login, sesi, peran (super_admin / staff), ganti password
-│   ├── users.py           # Kelola akun Staff/Super Admin (khusus Super Admin)
-│   ├── info_pasar.py      # Status pasar & berita (publik baca, Super Admin ubah)
-│   ├── katalog.py         # Lapak kosong publik, pendaftaran, katalog & foto lapak
-│   ├── tenants.py         # Data penyewa
-│   ├── payments.py        # Pembayaran & scan QR (penagih = akun login)
-│   ├── laporan.py         # Ekspor Excel (khusus Super Admin)
-│   └── dashboard.py, activities.py
-└── tests/                 # Tes otomatis (pytest)
+1. **Data Pedagang** — tambah manual (nama, NIK, HP, alamat). User ID otomatis `[NO_URUT]-[3 digit akhir KTP]`,
+   mis. `01-009`. Setiap pedagang punya **QR Code permanen** (isi QR = User ID) — tombol QR di tabel untuk unduh/cetak.
+2. **Data Lapak dan Iuran** — satu paket: nama lapak + harga sewa/bulan + iuran/hari (+ foto). Tombol **Tetapkan**
+   = admin meng-assign pedagang ke lapak (langsung aktif). Edit langsung di tabel (ikon pensil, Super Admin).
+3. **Sewa / Pendaftaran Lapak** — form sewa menampilkan harga/bulan & iuran, pencarian akun pedagang (ketik nama),
+   tanggal awal–akhir, dan **total = harga per bulan ÷ 30 × jumlah hari**. Booking publik berstatus *menunggu*
+   dan dikonfirmasi Super Admin / Staf Pemungut Iuran di menu **Pendaftaran Lapak**.
+4. **Pindai QR** — muncul tombol **Bayar Iuran** (sekali per hari per lapak) dan **Bayar Sewa Lapak**
+   (otomatis disembunyikan bila sewa sudah lunas). Nama penagih = akun yang login (readonly).
+5. **Pembayaran** — laporan pemasukan Sewa & Iuran, filter **Harian / Bulanan / Tahunan** + tanggal + jenis,
+   **Export Excel** & **Export PDF** (Super Admin). Kolom: Nama, ID, Periode Sewa, Harga/Jumlah, Penagih, Tanggal, Status, Jenis.
 
-frontend/src/
-├── assets/                # Gambar & logo (lihat bagian 2)
-├── content/beranda.ts     # Teks Home: hero, sejarah desa, sejarah pasar
-├── config.ts              # Nama desa, tarif acuan, WA admin, foto contoh lapak
-├── components/
-│   ├── ui/                # Komponen dasar (tombol, input, dialog — shadcn)
-│   ├── layout/            # Navbar, PublicLayout (+Footer), AppShell (sidebar admin), RequireAuth
-│   ├── home/              # Hero, SejarahSection
-│   ├── lapak/             # LapakCard, DaftarLapakDialog, TenantFormDialog, QrCardDialog
-│   ├── pembayaran/        # PaymentRecordDialog, ReceiptDialog, ExportDialog
-│   ├── katalog/           # Katalog lapak, foto, daftar pendaftar
-│   ├── pengaturan/        # GantiPasswordCard, UserManager
-│   └── common/            # Badges, DefaultPasswordAlert
-├── pages/
-│   ├── public/            # Home, InfoPasar, InformasiLapak (tanpa login)
-│   ├── admin/             # Dashboard, Lapak, Pembayaran, ScanQr, Tunggakan, Riwayat,
-│   │                      # Pendaftaran, InfoPasarAdmin, Pengaturan (wajib login)
-│   └── Login.tsx
-├── services/              # api.ts (pemanggilan backend), session.ts, queryClient.ts
-├── hooks/useAuth.ts       # Akun yang login + cek peran (isSuper)
-├── utils/                 # format.ts (Rupiah/tanggal), whatsapp.ts, errors.ts
-├── types/index.ts         # Tipe data TypeScript
-└── lib/                   # utils.ts (helper shadcn) & shim ikon/grafik
-```
+Menu admin: Dashboard → Data Pedagang → Data Lapak dan Iuran → Pendaftaran Lapak → Pembayaran → Pindai QR → Info Pasar → Settings.
 
----
-
-## 4. Peran Admin
+## 3. Peran Admin
 
 | Fitur | Super Admin (Tingkat 2) | Staf Pemungut Iuran (Tingkat 1) |
 |---|---|---|
-| Lihat semua halaman sistem | ✅ | ✅ (kecuali Info Pasar admin & kelola akun) |
-| Input data baru (penyewa, tagihan, scan QR, lapak) | ✅ | ✅ |
-| Ubah/hapus data yang sudah diinput | ✅ | ❌ (tombol disembunyikan + ditolak server) |
-| Konfirmasi/tolak/hapus pembayaran, terima/tolak pendaftar | ✅ | ❌ |
-| Ekspor Excel | ✅ | ❌ |
-| Total pembayaran (pemasukan, nilai tagihan, total tunggakan) | ✅ | ❌ (disembunyikan server) |
-| Kelola akun & Info Pasar | ✅ | ❌ |
+| Tambah pedagang / lapak, assign sewa, scan & terima bayar | ✅ | ✅ |
+| Konfirmasi / tolak pendaftaran lapak | ✅ | ✅ |
+| Edit / hapus data yang sudah ada, foto lapak | ✅ | ❌ |
+| Total pemasukan, Export Excel/PDF | ✅ | ❌ |
+| Info Pasar, kelola & **hapus akun** (Settings) | ✅ | ❌ |
 
-Akun Super Admin dibuat otomatis dari `backend/.env` (`ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`).
-Login bisa memakai username **atau** email. Akun Staf Pemungut Iuran dibuat Super Admin (username & password ditentukan Super Admin) di **Pengaturan → Akun Pengguna & Penagih**.
-
-**Scan QR:** kolom "Nama Penagih" otomatis terisi nama akun yang login (readonly) dan disimpan server.
-
-**Ekspor Excel** (menu Pembayaran → Ekspor Excel) dengan urutan kolom:
-`Nama | ID | Periode Sewa | Harga/Jumlah | Penagih | Tanggal | Status`.
+Login default Super Admin dari `backend/.env` (`ADMIN_USERNAME`, `ADMIN_PASSWORD`). Akun staf dibuat di **Settings**.
 
 ---
 
-## 5. Deploy & Menjalankan
+## 4. Cara Mengedit Konten Halaman Publik
 
-**backend/.env**
-```
-MONGO_URL="mongodb://<host>:27017"
-DB_NAME="bindes2026"
-CORS_ORIGINS="*"
-APP_TZ="Asia/Makassar"
-ADMIN_USERNAME="pengelola"
-ADMIN_EMAIL="email-admin@domain.com"
-ADMIN_PASSWORD="<password-kuat>"
-TRUSTED_PROXY_HOPS=2
-EMERGENT_LLM_KEY="<kunci penyimpanan foto>"
-```
-**frontend/.env**: `REACT_APP_BACKEND_URL="https://domain-backend-anda"`
+| Yang diubah | Lokasi |
+|---|---|
+| Judul & deskripsi Hero, sejarah desa & pasar | `frontend/src/content/beranda.ts` |
+| Menu Navbar | `frontend/src/components/layout/Navbar.tsx` (`MENU`) |
+| Teks footer | `frontend/src/components/layout/PublicLayout.tsx` |
+| Nama desa/pasar, zona waktu | `frontend/src/config.ts` (`BRANDING`) |
+| Warna aksen `#1E4E42` | `frontend/src/index.css` (`--color-brand…`, `--primary`) |
+| Info Pasar & berita | Panel admin → **Info Pasar** (tanpa edit kode) |
 
+## 5. Cara Mengganti Gambar/Foto
+
+Gambar publik ada di `frontend/src/assets/`: `logo-desa.svg`, `hero-desa.jpg`, `sejarah-desa.jpg`, `sejarah-pasar.jpg`.
+Timpa file dengan nama yang sama, atau ubah path import di `frontend/src/content/beranda.ts` baris 3–5.
+Foto lapak diunggah dari menu **Data Lapak dan Iuran** (klik thumbnail). Foto contoh: `frontend/src/config.ts` → `FOTO_CONTOH`.
+
+## 6. Data Awal dari Excel
+
+File sumber: `backend/data/pedagang.xlsx` (NAMA, NIK, NO. TELEPON, Alamat) dan `backend/data/lapak.xlsx`
+(No, Nama lapak, Harga per bulan, Iuran). Untuk mengisi ulang database (menghapus pedagang/lapak/sewa/pembayaran lama,
+akun login tetap):
+```bash
+cd backend && python seed.py
+```
+
+---
+
+## 7. Struktur Folder
+
+```
+backend/                 # FastAPI (dipakai platform ini)
+├── server.py            # Entry, semua route /api
+├── seed.py, data/       # Import data Excel
+├── lib/                 # db, keamanan password, rate limit, storage foto, tanggal, config
+├── models/pasar.py      # Model Pedagang, Lapak, Sewa, Pembayaran
+└── routers/             # auth, users, pedagang, katalog (lapak & sewa), payments (scan & bayar),
+                         # laporan (Excel/PDF), dashboard, info_pasar
+backend-node/            # Salinan Node.js (Express) — API & database sama
+├── src/index.js         # Entry Express (+ export untuk Vercel)
+├── src/db.js            # Koneksi Mongo & helper
+├── src/auth.js          # Login, sesi, akun
+├── src/pasar.js         # Pedagang, lapak, sewa, foto, info pasar
+├── src/pembayaran.js    # Bayar iuran/sewa, scan, dashboard, ekspor Excel & PDF
+├── src/storage.js       # Simpan foto lapak
+└── .env.example, vercel.json
+frontend/src/
+├── assets/              # Logo & foto
+├── content/beranda.ts   # Teks Home
+├── config.ts            # Nama desa, NOMOR WA ADMIN, foto contoh
+├── components/          # layout/, home/, lapak/ (LapakCard, SewaLapakDialog, QrCardDialog),
+│                        # katalog/FotoCell, common/ (PedagangSearch, DefaultPasswordAlert), pengaturan/, ui/
+├── pages/public/        # Home, InfoPasar, InformasiLapak
+├── pages/admin/         # Dashboard, DataPedagang, DataLapak, PendaftaranLapak, Pembayaran, ScanQr,
+│                        # InfoPasarAdmin, Pengaturan (Settings)
+├── services/            # api.ts, session.ts, queryClient.ts
+├── hooks/useAuth.ts     # Akun login & peran
+├── utils/               # format.ts (Rupiah, tanggal, hitung sewa), errors.ts
+└── types/index.ts
+```
+
+## 8. Menjalankan & Deploy
+
+**Backend Python** (`backend/.env`: `MONGO_URL`, `DB_NAME`, `CORS_ORIGINS`, `APP_TZ`, `ADMIN_USERNAME`,
+`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `TRUSTED_PROXY_HOPS`, `EMERGENT_LLM_KEY`):
 ```bash
 cd backend && pip install -r requirements.txt && uvicorn server:app --host 0.0.0.0 --port 8001
-cd frontend && yarn install && yarn build   # hasil di dist/
 ```
+
+**Backend Node.js** (salin `backend-node/.env.example` → `.env`, isi nilainya):
+```bash
+cd backend-node && npm install && npm start        # Render / Railway / VPS (port dari PORT)
+```
+- **Render**: New → Web Service → root `backend-node`, build `npm install`, start `npm start`, isi Environment.
+- **Vercel**: import folder `backend-node` (sudah ada `vercel.json`), isi Environment Variables.
+- Database: MongoDB Atlas (isi `MONGO_URL`). Hash password kompatibel dengan backend Python, jadi akun tetap bisa login.
+
+**Frontend**: `cd frontend && yarn install && yarn build` (hasil di `dist/`). Frontend memanggil `/api/...` —
+arahkan `/api` ke backend (proxy/rewrite) atau sajikan di domain yang sama.
