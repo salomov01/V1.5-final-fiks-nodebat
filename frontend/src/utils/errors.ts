@@ -5,6 +5,6 @@ export function errDetail(e: unknown, fallback: string): string {
   const d = e instanceof ApiError && e.body && typeof e.body === "object" && "detail" in e.body
     ? (e.body as { detail: unknown }).detail : null;
   if (typeof d === "string") return d;
-  if (Array.isArray(d)) return d.map((x) => (x && typeof x.msg === "string" ? x.msg : "")).filter(Boolean).join(" ") || fallback;
+  // Validasi pydantic (array, teks Inggris) -> pakai pesan Indonesia dari pemanggil.
   return fallback;
 }

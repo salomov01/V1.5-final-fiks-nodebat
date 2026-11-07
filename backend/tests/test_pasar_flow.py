@@ -67,7 +67,8 @@ class TestPedagang:
         p = r.json()
         seq, tail = p["user_id"].split("-")
         assert tail == n[-3:]
-        assert int(seq) == before + 1, f"expected seq {before+1}, got {p['user_id']}"
+        # counter is monotonic (deleted TEST_ pedagang from earlier runs keep their number)
+        assert int(seq) >= before + 1, f"expected seq >= {before+1}, got {p['user_id']}"
         assert sup.post("/pedagang", json={"nama": "TEST_Dup", "nik": n}).status_code == 409
         assert staff.patch(f"/pedagang/{p['id']}", json={"nama": "TEST_x"}).status_code == 403
         assert staff.delete(f"/pedagang/{p['id']}").status_code == 403

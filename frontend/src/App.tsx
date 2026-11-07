@@ -32,7 +32,7 @@ export default function App() {
         <Route path="/dashboard/*" element={<Protected />} />
         <Route path="*" element={<LegacyRedirect />} />
       </Routes>
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" />
     </>
   );
 }

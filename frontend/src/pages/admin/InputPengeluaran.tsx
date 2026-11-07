@@ -19,7 +19,7 @@ export const KATEGORI: { v: KategoriPengeluaran; l: string }[] = [
 ];
 const LABEL = Object.fromEntries(KATEGORI.map((k) => [k.v, k.l]));
 const PERIODE = [{ v: "harian", l: "Harian" }, { v: "bulanan", l: "Bulanan" }, { v: "tahunan", l: "Tahunan" }];
-const SELECT = "h-9 rounded-lg border border-input bg-background px-2 text-sm";
+const SELECT = "h-9 w-full min-w-0 truncate rounded-lg border border-input bg-background px-2 text-sm";
 
 // Input Pengeluaran (khusus Super Admin). Kategori Gaji: pilih Pemungut → nominal dari gaji dasar akunnya.
 export default function InputPengeluaran() {

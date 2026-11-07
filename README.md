@@ -54,8 +54,9 @@ Menu admin: Dashboard → Data Pedagang → Data Lapak dan Iuran → Pendaftaran
 | Edit / hapus data yang sudah ada, foto lapak | ✅ | ❌ |
 | Total pemasukan, Export Excel/PDF | ✅ | ❌ |
 | Info Pasar, kelola & **hapus akun** (Settings) | ✅ | ❌ |
+| Input Pengeluaran, Harga Barang, Export Pemasukan / Pengeluaran / Rekap Akhir (Saldo) | ✅ | ❌ |
 
-Login default Super Admin dari `backend/.env` (`ADMIN_USERNAME`, `ADMIN_PASSWORD`). Akun staf dibuat di **Settings**.
+Login default Super Admin dari `backend/.env` (`ADMIN_USERNAME`, `ADMIN_PASSWORD`). Akun staf dibuat di **Settings** — isi juga **Gaji dasar / bulan** untuk Pemungut (dipakai otomatis saat mencatat pengeluaran kategori Gaji; bisa diubah lewat tombol "Ubah gaji").
 
 ---
 

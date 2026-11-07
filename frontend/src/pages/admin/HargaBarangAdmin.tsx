@@ -37,7 +37,7 @@ export default function HargaBarangAdmin() {
         <Input placeholder="Nama barang, mis. Beras Medium" value={f.nama} data-testid="input-harga-nama" onChange={(e) => setF({ ...f, nama: e.target.value })} />
         <Input placeholder="Satuan (kg, liter, ikat)" value={f.satuan} data-testid="input-harga-satuan" onChange={(e) => setF({ ...f, satuan: e.target.value })} />
         <Input type="number" min={0} placeholder="Harga (Rp)" value={f.harga} data-testid="input-harga-nilai" onChange={(e) => setF({ ...f, harga: e.target.value })} />
-        <Button type="submit" disabled={simpan.isPending} data-testid="btn-simpan-harga"><Plus data-icon="inline-start" className="size-4" /> {editId ? "Simpan" : "Tambah"}</Button>
+        <Button type="submit" disabled={simpan.isPending} data-testid="btn-simpan-harga">{editId ? <Pencil data-icon="inline-start" className="size-4" /> : <Plus data-icon="inline-start" className="size-4" />} {editId ? "Simpan" : "Tambah"}</Button>
         {editId && <Button type="button" variant="ghost" onClick={() => { setEditId(null); setF(KOSONG); }} data-testid="btn-batal-edit-harga"><X className="size-4" /></Button>}
       </form>
       <div className="mt-4 overflow-x-auto rounded-xl border bg-card">
