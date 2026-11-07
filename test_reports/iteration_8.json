@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 8: tested the template-based Pengeluaran export and Pegawai Penerima Gaji. Backend: new tests/test_laporan_pengeluaran.py (12 tests) plus regression test_keuangan, test_kuitansi and test_pasar_flow (41 tests). All pass after updating 3 outdated assertions in test_keuangan.py. XLSX checks: exactly 5 sheets [Barang, Jasa, Daya, Operasional lain-lain, Gaji]; A1 'LAPORAN'; A2 titles for bulanan, harian and tahunan; header labels per kategori (Barang/Harga vs Kegiatan/Nilai); rows sorted by tanggal with No. 1..n; Keterangan column = catatan; Total row '=SUM(D5:Dn)' (0 when the sheet is empty); 'I Wayan Mushadi' present; formula injection escaped. PDF: 5 pages for all 3 periods, and keterangan containing '&' and '<x>' does not crash. Also passed: Pegawai CRUD with validation and 404s, staff gets 403 on all pegawai and penerima-gaji routes, penerima-gaji returns pegawai (sumber=pegawai) + staff accounts (sumber=akun, jabatan Pemungut), gaji via pegawai id and via account id (auto amount, 'Catu <nama>', 409 on duplicate, 422 for an unknown id), non-gaji validation, and the rekap Saldo Akhir value. UI /dashboard/pengeluaran: labels switch by kategori, table columns are correct, pegawai add/edit/delete works, a new pegawai shows up in select-pemungut, gaji amount auto-fills, the duplicate toast appears, catatan shows in the table, total updates and rows can be deleted.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Add pegawai then immediately switch kategori to Gaji", "issue": "In one run the new pegawai was not yet in select-pemungut right after it appeared in the list. The penerima-gaji refetch finishes slightly later than the pegawai list refetch. It appeared after about 1.5s, and a select that was already open updates live. This is a timing race, not a real defect.", "affected_selectors": ["select-pemungut"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_laporan_pengeluaran.py", "/app/backend/tests/test_keuangan.py", "/app/test_reports/pytest/pytest_iter8.xml"],
+  "action_items": [
+    "Optional: add onError toast to the hapus mutation in PegawaiManager.tsx (other mutations have it)",
+    "Optional: penerima-gaji lists all staff accounts including inactive ones, so filter by active status if that field exists"
+  ],
+  "critical_code_review_comments": [
+    "PegawaiManager hapus mutation has no onError, so a failed delete is silent",
+    "pdf_pengeluaran passes raw keterangan into reportlab Paragraph without escaping. It did not crash with '&' or '<x>', but markup like '<b>' would be rendered as formatting. Consider xml-escaping it.",
+    "Deleting a pegawai leaves earlier gaji pengeluaran pointing to the deleted id. The name is kept in penerima, so this is acceptable."
+  ],
+  "updated_files": ["/app/backend/tests/test_keuangan.py (Gaji keterangan now 'Catu <nama>'; pengeluaran.xlsx assertion adapted to the per-kategori template; min length check changed from 'ab' to 'a' since 2 chars is now valid)", "/app/backend/tests/test_laporan_pengeluaran.py (new)"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None kept. All TEST_ pengeluaran, pegawai and users were deleted by id. One accidental 'ab' barang record (from the outdated old test) was also deleted by id. pemungut1 gaji_bulanan verified 0.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && BACKEND_URL=https://lapak-iuran-qr.preview.emergentagent.com pytest tests/test_laporan_pengeluaran.py tests/test_keuangan.py -n0 -p no:randomly. test_laporan_pengeluaran uses the isolated month 2031-03 for deterministic export rows and cleans up by id. The browser clock in the automation env shows Nov 2026. Dialogs (confirm) must be auto-accepted in Playwright."
+}

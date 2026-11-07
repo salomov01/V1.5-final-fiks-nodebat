@@ -82,7 +82,7 @@ class TestUsersGaji:
 class TestPengeluaran:
     def test_non_gaji_validation(self, sup):
         assert sup.post("/pengeluaran", json={"kategori": "barang", "keterangan": "TEST_x"}).status_code == 422
-        assert sup.post("/pengeluaran", json={"kategori": "barang", "keterangan": "ab", "jumlah": 1000}).status_code == 422
+        assert sup.post("/pengeluaran", json={"kategori": "barang", "keterangan": "a", "jumlah": 1000}).status_code == 422
         assert sup.post("/pengeluaran", json={"kategori": "xyz", "keterangan": "TEST_abc", "jumlah": 1000}).status_code == 422
 
     def test_create_list_delete(self, sup, ctx):
@@ -114,7 +114,7 @@ class TestPengeluaran:
         assert g["jumlah"] == 3000000
         assert g["penerima"] == "TEST_Pemungut Gaji"
         assert g["periode_gaji"] == T[:7]
-        assert g["keterangan"] == f"Gaji TEST_Pemungut Gaji bulan {T[:7]}"
+        assert g["keterangan"] == "Catu TEST_Pemungut Gaji"
         r2 = sup.post("/pengeluaran", json={"kategori": "gaji", "pemungut_id": uid, "tanggal": T, "jumlah": 100})
         assert r2.status_code == 409, r2.text
         # gaji 0 & no jumlah -> 422; with jumlah -> ok
@@ -204,9 +204,9 @@ class TestLaporan:
         keluar = sup.get("/pengeluaran", params=p).json()
         tp = sum(x["jumlah"] for x in masuk["items"])
         tk = keluar["total"]
-        rows = _rows(sup.get("/laporan/pengeluaran.xlsx", params=p).content)
-        tot = [r for r in rows if "Total Pengeluaran" in r]
-        assert tot and tot[-1][4] == tk
+        wb = load_workbook(io.BytesIO(sup.get("/laporan/pengeluaran.xlsx", params=p).content))
+        n = sum(1 for ws in wb for r in ws.iter_rows(min_row=5, values_only=True) if isinstance(r[0], int))
+        assert n == len(keluar["items"])  # template per-kategori (iteration 8)
         rows = _rows(sup.get("/laporan/rekap.xlsx", params=p).content)
         data = [r for r in rows if r[1] in ("Pemasukan", "Pengeluaran")]
         assert len([r for r in data if r[1] == "Pemasukan"]) == len(masuk["items"])
