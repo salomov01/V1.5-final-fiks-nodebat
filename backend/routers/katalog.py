@@ -88,7 +88,8 @@ def _sewa_baru(lapak: Lapak, mulai: str, selesai: str, **kw) -> Sewa:
 # ---------- Publik ----------
 @public_router.get("/lapak-kosong", response_model=List[LapakPublik])
 async def lapak_kosong():
-    terisi = await _terisi()
+    """Lapak tanpa sewa berjalan hari ini dan tanpa pendaftaran yang menunggu konfirmasi admin."""
+    terisi = set(await _terisi()) | set(await db.sewa.distinct("lapak_id", {"status": "menunggu"}))
     return [LapakPublik(**l.model_dump()) for l in await _list_lapak() if l.id not in terisi]
 
 

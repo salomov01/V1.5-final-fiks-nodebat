@@ -82,7 +82,8 @@ export function hitungSewa(harga, mulai, selesai) {
 }
 pasarRouter.get("/publik/lapak-kosong", wrap(async (_req, res) => {
   const t = await terisi();
-  res.json((await col("lapak").find().sort({ created_at: 1 }).toArray()).filter((l) => !t[l.id]).map(lapakOut));
+  const menunggu = new Set(await col("sewa").distinct("lapak_id", { status: "menunggu" }));
+  res.json((await col("lapak").find().sort({ created_at: 1 }).toArray()).filter((l) => !t[l.id] && !menunggu.has(l.id)).map(lapakOut));
 }));
 pasarRouter.get("/lapak", S, wrap(async (_req, res) => {
   const t = await terisi();
