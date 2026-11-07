@@ -23,6 +23,7 @@ class UserOut(BaseModel):
     username: str
     role: Role
     aktif: bool
+    gaji_bulanan: int = 0  # gaji dasar Pemungut per bulan (dipakai kategori Gaji di Pengeluaran)
 
 
 class UserCreate(BaseModel):
@@ -30,17 +31,20 @@ class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=40, pattern=r"^[a-zA-Z0-9._-]+$")
     password: str = Field(min_length=8, max_length=128)
     role: Role = "staff"
+    gaji_bulanan: int = Field(default=0, ge=0, le=1_000_000_000)
 
 
 class UserUpdate(BaseModel):
     nama: str | None = Field(default=None, min_length=2, max_length=120)
     role: Role | None = None
     aktif: bool | None = None
+    gaji_bulanan: int | None = Field(default=None, ge=0, le=1_000_000_000)
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
 def _out(d: dict) -> UserOut:
-    return UserOut(id=d["id"], nama=d["nama"], username=d["username"], role=d["role"], aktif=d.get("aktif", True))
+    return UserOut(id=d["id"], nama=d["nama"], username=d["username"], role=d["role"], aktif=d.get("aktif", True),
+                   gaji_bulanan=d.get("gaji_bulanan", 0))
 
 
 @router.get("", response_model=List[UserOut])
@@ -56,7 +60,7 @@ async def create_user(input: UserCreate, actor: str = Depends(require_super)):
     salt, digest = hash_password(input.password)
     doc = {
         "id": str(uuid.uuid4()), "nama": input.nama.strip(), "username": username, "email": "",
-        "role": input.role, "aktif": True, "salt": salt, "password_hash": digest,
+        "role": input.role, "aktif": True, "gaji_bulanan": input.gaji_bulanan, "salt": salt, "password_hash": digest,
         "created_at": datetime.now(timezone.utc),
     }
     await db.users.insert_one(doc)

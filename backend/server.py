@@ -14,7 +14,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 from lib.db import client, db, ensure_indexes  # noqa: E402
-from routers import auth, dashboard, info_pasar, katalog, laporan, payments, pedagang, users  # noqa: E402
+from routers import auth, dashboard, harga_barang, info_pasar, katalog, laporan, payments, pedagang, pengeluaran, users  # noqa: E402
 
 
 # Startup runs before the yield, shutdown after it. Add your own setup/teardown here.
@@ -50,6 +50,9 @@ api_router.include_router(katalog.admin_router)
 api_router.include_router(info_pasar.public_router)
 api_router.include_router(info_pasar.admin_router)
 api_router.include_router(users.router)
+api_router.include_router(pengeluaran.router)
+api_router.include_router(harga_barang.public_router)
+api_router.include_router(harga_barang.admin_router)
 app.include_router(api_router)
 
 

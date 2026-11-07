@@ -16,6 +16,30 @@ export interface UserAccount {
   username: string;
   role: Role;
   aktif: boolean;
+  gaji_bulanan: number;
+}
+
+export type KategoriPengeluaran = "barang" | "jasa" | "daya" | "operasional" | "gaji";
+
+export interface Pengeluaran {
+  id: string;
+  kategori: KategoriPengeluaran;
+  keterangan: string;
+  jumlah: number;
+  tanggal: string;
+  pemungut_id: string | null;
+  penerima: string;
+  periode_gaji: string | null;
+  dicatat_oleh: string;
+  created_at: string;
+}
+
+export interface HargaBarang {
+  id: string;
+  nama: string;
+  satuan: string;
+  harga: number;
+  updated_at: string;
 }
 
 export interface Pedagang {

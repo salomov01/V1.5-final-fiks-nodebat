@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import logoDesa from "@/assets/logo-desa.svg";
 import PublicLayout from "@/components/layout/PublicLayout";
 import { BRANDING } from "@/config";
@@ -18,6 +18,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [lihat, setLihat] = useState(false);
 
   // Sudah login? Langsung ke dashboard.
   const { data: me } = useQuery({
@@ -89,15 +90,23 @@ export default function Login() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="login-password">Password</Label>
-              <Input
-                id="login-password"
-                data-testid="input-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  data-testid="input-password"
+                  type={lihat ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className="pr-10"
+                />
+                <button type="button" onClick={() => setLihat(!lihat)} data-testid="btn-toggle-password"
+                  aria-label={lihat ? "Sembunyikan password" : "Tampilkan password"}
+                  className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-slate-500 transition-colors hover:text-brand">
+                  {lihat ? <Eye className="size-4" data-testid="icon-mata-terbuka" /> : <EyeOff className="size-4" data-testid="icon-mata-tertutup" />}
+                </button>
+              </div>
             </div>
             <Button type="submit" disabled={login.isPending} data-testid="btn-login">
               <LogIn data-icon="inline-start" className="size-4" />

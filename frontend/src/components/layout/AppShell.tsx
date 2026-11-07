@@ -3,7 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ClipboardList, Globe, LayoutDashboard, LogOut, Menu, Newspaper,
-  ReceiptText, ScanLine, Settings, Store, Users,
+  ReceiptText, ScanLine, Settings, Store, Tags, Users, Wallet,
 } from "lucide-react";
 import logoDesa from "@/assets/logo-desa.svg";
 import { apiGet } from "@/services/api";
@@ -24,7 +24,9 @@ const NAV_ITEMS = [
   { to: "/dashboard/pendaftaran", label: "Pendaftaran Lapak", icon: ClipboardList, badge: "daftar" },
   { to: "/dashboard/pembayaran", label: "Pembayaran", icon: ReceiptText },
   { to: "/dashboard/scan-qr", label: "Pindai QR", icon: ScanLine },
+  { to: "/dashboard/pengeluaran", label: "Input Pengeluaran", icon: Wallet, superOnly: true },
   { to: "/dashboard/info-pasar", label: "Info Pasar", icon: Newspaper, superOnly: true },
+  { to: "/dashboard/harga-barang", label: "Harga Barang", icon: Tags, superOnly: true },
   { to: "/dashboard/pengaturan", label: "Settings", icon: Settings },
 ];
 

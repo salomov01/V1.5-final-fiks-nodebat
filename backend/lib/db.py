@@ -44,6 +44,13 @@ INDEXES: dict[str, list[IndexModel]] = {
         IndexModel([("username", ASCENDING)], name="username", unique=True),
     ],
     "berita": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
+    "pengeluaran": [
+        IndexModel([("id", ASCENDING)], name="id", unique=True),
+        IndexModel([("tanggal", DESCENDING), ("kategori", ASCENDING)], name="tanggal_kategori"),
+        IndexModel([("pemungut_id", ASCENDING), ("periode_gaji", ASCENDING)], name="gaji_unik", unique=True,
+                   partialFilterExpression={"kategori": "gaji"}),
+    ],
+    "harga_barang": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
     "sessions": [
         IndexModel([("token", ASCENDING)], name="token", unique=True),
         IndexModel([("created_at", ASCENDING)], name="created_ttl", expireAfterSeconds=604800),

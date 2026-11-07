@@ -9,6 +9,7 @@ const MENU = [
   { to: "/", label: "Home", end: true, testid: "nav-home" },
   { to: "/info-pasar", label: "Info Pasar", testid: "nav-info-pasar" },
   { to: "/informasi-lapak", label: "Informasi Lapak", testid: "nav-informasi-lapak" },
+  { to: "/harga-barang", label: "Harga Barang", testid: "nav-harga-barang" },
   { to: "/login", label: "Login", testid: "nav-login" },
 ];
 

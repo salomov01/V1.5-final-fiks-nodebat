@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileSpreadsheet, FileText, Receipt, Trash2 } from "lucide-react";
+import { Receipt, Trash2 } from "lucide-react";
+import { ExportLaporan } from "@/components/laporan/ExportLaporan";
 import { KuitansiDialog } from "@/components/pembayaran/KuitansiDialog";
 import { apiDelete, apiGet } from "@/services/api";
 import { errDetail } from "@/utils/errors";
@@ -14,18 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 
 const PERIODE = [{ v: "harian", l: "Harian" }, { v: "bulanan", l: "Bulanan" }, { v: "tahunan", l: "Tahunan" }];
-
-// Unduh file laporan (Excel/PDF) memakai cookie sesi — filter sama dengan tabel.
-async function unduh(ext: "xlsx" | "pdf", qs: string) {
-  const res = await fetch(`/api/laporan/pembayaran.${ext}?${qs}`);
-  if (!res.ok) return toast.error("Gagal mengekspor laporan");
-  const url = URL.createObjectURL(await res.blob());
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = res.headers.get("content-disposition")?.match(/filename="(.+)"/)?.[1] ?? `laporan.${ext}`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 // Pembayaran: laporan pemasukan Sewa Lapak & Iuran, filter Harian/Bulanan/Tahunan, ekspor Excel & PDF (Super Admin).
 export default function Pembayaran() {
@@ -50,12 +39,7 @@ export default function Pembayaran() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" data-testid="judul-pembayaran">Pembayaran</h1>
           <p className="mt-1 text-sm text-muted-foreground">Laporan pemasukan Sewa Lapak & Iuran harian.</p>
         </div>
-        {isSuper && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => void unduh("xlsx", qs)} data-testid="btn-ekspor-excel"><FileSpreadsheet data-icon="inline-start" className="size-4" /> Export Excel</Button>
-            <Button variant="outline" onClick={() => void unduh("pdf", qs)} data-testid="btn-ekspor-pdf"><FileText data-icon="inline-start" className="size-4" /> Export PDF</Button>
-          </div>
-        )}
+        {isSuper && <ExportLaporan qs={qs} />}
       </div>
 
       {/* Filter laporan & ekspor */}

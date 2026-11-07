@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { KeyRound, Trash2, UserPlus, Users } from "lucide-react";
+import { KeyRound, Trash2, UserPlus, Users, Wallet } from "lucide-react";
+import { formatRupiah } from "@/utils/format";
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
 import { errDetail } from "@/utils/errors";
 import { ROLE_LABEL, useAuth } from "@/hooks/useAuth";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-const KOSONG = { nama: "", username: "", password: "", role: "staff" as Role };
+const KOSONG = { nama: "", username: "", password: "", role: "staff" as Role, gaji_bulanan: 0 };
 
 // Kelola akun pengguna (khusus Super Admin). Nama akun dipakai otomatis sebagai "Nama Penagih".
 export default function UserManager() {
@@ -37,6 +38,11 @@ export default function UserManager() {
     onError: (e) => toast.error(errDetail(e, "Gagal menghapus akun")),
   });
 
+  const ubahGaji = (u: UserAccount) => {
+    const v = window.prompt(`Gaji dasar per bulan untuk ${u.nama} (Rp):`, String(u.gaji_bulanan || ""));
+    if (v !== null && v.trim() !== "" && !Number.isNaN(Number(v))) ubah.mutate({ id: u.id, body: { gaji_bulanan: Math.max(0, Math.round(Number(v))) } });
+  };
+
   const resetPassword = (u: UserAccount) => {
     const pw = window.prompt(`Password baru untuk ${u.username} (min. 8 karakter):`);
     if (pw) ubah.mutate({ id: u.id, body: { password: pw } });
@@ -52,7 +58,7 @@ export default function UserManager() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <form className="grid gap-2 sm:grid-cols-5" onSubmit={(e) => { e.preventDefault(); tambah.mutate(); }}>
+        <form className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6" onSubmit={(e) => { e.preventDefault(); tambah.mutate(); }}>
           <Input placeholder="Nama lengkap" value={form.nama} data-testid="input-user-nama" onChange={(e) => setForm({ ...form, nama: e.target.value })} />
           <Input placeholder="Username" value={form.username} data-testid="input-user-username" onChange={(e) => setForm({ ...form, username: e.target.value })} />
           <Input placeholder="Password" type="password" value={form.password} data-testid="input-user-password" onChange={(e) => setForm({ ...form, password: e.target.value })} />
@@ -61,6 +67,9 @@ export default function UserManager() {
             <option value="staff">Staf Pemungut Iuran</option>
             <option value="super_admin">Super Admin</option>
           </select>
+          <Input type="number" min={0} placeholder="Gaji dasar / bulan" disabled={form.role !== "staff"} value={form.gaji_bulanan || ""}
+            data-testid="input-user-gaji" title="Gaji dasar Pemungut per bulan (Rp)"
+            onChange={(e) => setForm({ ...form, gaji_bulanan: Number(e.target.value) || 0 })} />
           <Button type="submit" disabled={tambah.isPending} data-testid="btn-tambah-user">
             <UserPlus data-icon="inline-start" className="size-4" /> Tambah
           </Button>
@@ -70,8 +79,14 @@ export default function UserManager() {
             <div key={u.id} className="flex flex-wrap items-center gap-3 p-3" data-testid={`akun-${u.username}`}>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{u.nama} {u.id === me?.id && <span className="text-xs text-muted-foreground">(Anda)</span>}</p>
-                <p className="text-xs text-muted-foreground">@{u.username} • {ROLE_LABEL[u.role]}</p>
+                <p className="text-xs text-muted-foreground">@{u.username} • {ROLE_LABEL[u.role]}
+                  {u.role === "staff" && <span data-testid={`gaji-${u.username}`}> • Gaji {formatRupiah(u.gaji_bulanan)}/bulan</span>}</p>
               </div>
+              {u.role === "staff" && (
+                <Button size="sm" variant="ghost" onClick={() => ubahGaji(u)} data-testid={`btn-ubah-gaji-${u.username}`}>
+                  <Wallet data-icon="inline-start" className="size-4" /> Ubah gaji
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={() => resetPassword(u)} data-testid={`btn-reset-pw-${u.username}`}>
                 <KeyRound data-icon="inline-start" className="size-4" /> Reset password
               </Button>

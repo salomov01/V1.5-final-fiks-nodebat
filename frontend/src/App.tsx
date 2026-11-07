@@ -13,6 +13,9 @@ import Pembayaran from "@/pages/admin/Pembayaran";
 import Pengaturan from "@/pages/admin/Pengaturan";
 import ScanQr from "@/pages/admin/ScanQr";
 import InfoPasarAdmin from "@/pages/admin/InfoPasarAdmin";
+import InputPengeluaran from "@/pages/admin/InputPengeluaran";
+import HargaBarangAdmin from "@/pages/admin/HargaBarangAdmin";
+import HargaBarangPublik from "@/pages/public/HargaBarang";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -24,6 +27,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/info-pasar" element={<InfoPasar />} />
         <Route path="/informasi-lapak" element={<InformasiLapak />} />
+        <Route path="/harga-barang" element={<HargaBarangPublik />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard/*" element={<Protected />} />
         <Route path="*" element={<LegacyRedirect />} />
@@ -57,6 +61,8 @@ function Protected() {
           <Route path="pembayaran" element={<Pembayaran />} />
           <Route path="scan-qr" element={<ScanQr />} />
           <Route path="info-pasar" element={<SuperOnly><InfoPasarAdmin /></SuperOnly>} />
+          <Route path="pengeluaran" element={<SuperOnly><InputPengeluaran /></SuperOnly>} />
+          <Route path="harga-barang" element={<SuperOnly><HargaBarangAdmin /></SuperOnly>} />
           <Route path="pengaturan" element={<Pengaturan />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

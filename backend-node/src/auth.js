@@ -80,17 +80,18 @@ authRouter.post("/auth/change-password", requireSession, wrap(async (req, res) =
 }));
 
 // ---- Kelola akun (Super Admin) ----
-const out = (u) => ({ id: u.id, nama: u.nama, username: u.username, role: u.role, aktif: u.aktif !== false });
+const gajiValid = (g) => Number.isInteger(g) && g >= 0 && g <= 1e9;
+const out = (u) => ({ id: u.id, nama: u.nama, username: u.username, role: u.role, aktif: u.aktif !== false, gaji_bulanan: u.gaji_bulanan || 0 });
 authRouter.get("/users", requireSession, requireSuper, wrap(async (_req, res) => {
   res.json((await users().find().sort({ created_at: 1 }).toArray()).map(out));
 }));
 authRouter.post("/users", requireSession, requireSuper, wrap(async (req, res) => {
-  const { nama = "", username = "", password = "", role = "staff" } = req.body;
+  const { nama = "", username = "", password = "", role = "staff", gaji_bulanan = 0 } = req.body;
   const uname = username.trim().toLowerCase();
-  if (nama.trim().length < 2 || !/^[a-z0-9._-]{3,40}$/.test(uname) || password.length < 8 || !["staff", "super_admin"].includes(role))
+  if (nama.trim().length < 2 || !/^[a-z0-9._-]{3,40}$/.test(uname) || password.length < 8 || !["staff", "super_admin"].includes(role) || !gajiValid(gaji_bulanan))
     throw new HttpError(422, "Isi nama, username (min 3) & password (min 8)");
   if (await users().findOne({ $or: [{ username: uname }, { email: uname }] })) throw new HttpError(409, `Username ${uname} sudah dipakai`);
-  const doc = { id: newId(), nama: nama.trim(), username: uname, email: "", role, aktif: true, ...hashPassword(password), created_at: new Date() };
+  const doc = { id: newId(), nama: nama.trim(), username: uname, email: "", role, aktif: true, gaji_bulanan, ...hashPassword(password), created_at: new Date() };
   await users().insertOne(doc);
   await logActivity(req.user.username, "buat", "akun", doc.id, uname, role);
   res.status(201).json(out(doc));
@@ -98,10 +99,14 @@ authRouter.post("/users", requireSession, requireSuper, wrap(async (req, res) =>
 authRouter.patch("/users/:id", requireSession, requireSuper, wrap(async (req, res) => {
   const u = await users().findOne({ id: req.params.id });
   if (!u) throw new HttpError(404, "Akun tidak ditemukan");
-  const { nama, role, aktif, password } = req.body;
+  const { nama, role, aktif, password, gaji_bulanan } = req.body;
   if (u.id === req.user.id && (aktif === false || (role && role !== "super_admin")))
     throw new HttpError(409, "Tidak bisa menonaktifkan atau menurunkan peran akun sendiri");
   const set = {};
+  if (gaji_bulanan !== undefined) {
+    if (!gajiValid(gaji_bulanan)) throw new HttpError(422, "Gaji tidak valid");
+    set.gaji_bulanan = gaji_bulanan;
+  }
   if (nama) set.nama = nama;
   if (role) set.role = role;
   if (typeof aktif === "boolean") set.aktif = aktif;
