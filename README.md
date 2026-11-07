@@ -70,6 +70,25 @@ Login default Super Admin dari `backend/.env` (`ADMIN_USERNAME`, `ADMIN_PASSWORD
 | Nama desa/pasar, zona waktu | `frontend/src/config.ts` (`BRANDING`) |
 | Warna aksen `#1E4E42` | `frontend/src/index.css` (`--color-brand…`, `--primary`) |
 | Info Pasar & berita | Panel admin → **Info Pasar** (tanpa edit kode) |
+| Harga barang publik | Panel admin → **Harga Barang** (tanpa edit kode) |
+
+### ⭐ Cara Mengganti Nama Penanda Tangan Laporan Pengeluaran
+
+Nama di bagian bawah laporan pengeluaran (Excel & PDF), default **I Wayan Mushadi**:
+
+1. Buka file `backend/lib/config.py`.
+2. Ubah teks di dalam tanda kutip:
+   ```python
+   PENANDATANGAN_NAMA = "I Wayan Mushadi"
+   PENANDATANGAN_JABATAN = ""          # mis. "Kepala Pasar" (boleh dikosongkan)
+   ```
+3. Simpan. Export berikutnya langsung memakai nama baru.
+4. Bila memakai backend Node.js, ubah juga 2 baris yang sama di `backend-node/src/keuangan.js` (`PENANDATANGAN_NAMA`, `PENANDATANGAN_JABATAN`).
+
+### Laporan Pengeluaran (format template pasar)
+
+- Excel: 1 sheet per kategori (**Barang, Jasa, Daya, Operasional lain-lain, Gaji**) berisi No., Tanggal, Barang/Kegiatan, Harga/Nilai, Keterangan, baris **Total**, dan penanda tangan. PDF: 1 halaman per kategori dengan format sama.
+- Penerima gaji: **Pegawai** tanpa akun (mis. Mangku Pasar) ditambah di menu **Input Pengeluaran → Pegawai Penerima Gaji**; **Pemungut** memakai gaji dasar di Settings › Akun.
 
 ## 5. Cara Mengganti Gambar/Foto
 

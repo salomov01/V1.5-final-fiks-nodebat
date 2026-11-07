@@ -5,7 +5,8 @@ import { Plus, Trash2 } from "lucide-react";
 import { apiDelete, apiGet, apiPost } from "@/services/api";
 import { errDetail } from "@/utils/errors";
 import { formatDateID, formatRupiah, todayISO } from "@/utils/format";
-import type { KategoriPengeluaran, Pengeluaran, UserAccount } from "@/types";
+import type { KategoriPengeluaran, PenerimaGaji, Pengeluaran } from "@/types";
+import { PegawaiManager } from "@/components/pengeluaran/PegawaiManager";
 import { ExportLaporan } from "@/components/laporan/ExportLaporan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,33 +51,33 @@ export default function InputPengeluaran() {
         </div>
       </div>
       <TabelPengeluaran items={data?.items ?? []} />
+      <PegawaiManager />
     </div>
   );
 }
 
-const KOSONG = { kategori: "barang" as KategoriPengeluaran, keterangan: "", jumlah: "", tanggal: todayISO(), pemungut_id: "" };
+const KOSONG = { kategori: "barang" as KategoriPengeluaran, keterangan: "", catatan: "", jumlah: "", tanggal: todayISO(), pemungut_id: "" };
 
 function FormPengeluaran() {
   const qc = useQueryClient();
   const [f, setF] = useState(KOSONG);
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: () => apiGet<UserAccount[]>("/users") });
-  const pemungut = (users ?? []).filter((u) => u.role === "staff");
+  const { data: penerima } = useQuery({ queryKey: ["penerima-gaji"], queryFn: () => apiGet<PenerimaGaji[]>("/pengeluaran/penerima-gaji") });
   const gaji = f.kategori === "gaji";
-  const pilihPemungut = (id: string) => {
-    const u = pemungut.find((x) => x.id === id);
+  const pilihPenerima = (id: string) => {
+    const u = penerima?.find((x) => x.id === id);
     setF({ ...f, pemungut_id: id, jumlah: u?.gaji_bulanan ? String(u.gaji_bulanan) : "" });
   };
   const simpan = useMutation({
     mutationFn: () => apiPost<Pengeluaran>("/pengeluaran", {
-      kategori: f.kategori, keterangan: f.keterangan, tanggal: f.tanggal, jumlah: Number(f.jumlah) || null,
+      kategori: f.kategori, keterangan: f.keterangan, catatan: f.catatan, tanggal: f.tanggal, jumlah: Number(f.jumlah) || null,
       ...(gaji ? { pemungut_id: f.pemungut_id || null } : {}),
     }),
-    onSuccess: () => { setF({ ...KOSONG, kategori: f.kategori }); void qc.invalidateQueries({ queryKey: ["pengeluaran"] }); toast.success("Pengeluaran dicatat"); },
+    onSuccess: () => { setF({ ...KOSONG, kategori: f.kategori, tanggal: f.tanggal }); void qc.invalidateQueries({ queryKey: ["pengeluaran"] }); toast.success("Pengeluaran dicatat"); },
     onError: (e) => toast.error(errDetail(e, "Gagal menyimpan pengeluaran")),
   });
 
   return (
-    <form className="mt-6 grid gap-3 rounded-2xl border bg-card p-5 sm:grid-cols-2 lg:grid-cols-6" data-testid="form-pengeluaran"
+    <form className="mt-6 grid gap-3 rounded-2xl border bg-card p-5 sm:grid-cols-2 lg:grid-cols-7" data-testid="form-pengeluaran"
       onSubmit={(e) => { e.preventDefault(); simpan.mutate(); }}>
       <div className="grid gap-1.5"><Label htmlFor="kategori">Kategori</Label>
         <select id="kategori" className={SELECT} value={f.kategori} data-testid="select-kategori"
@@ -84,21 +85,23 @@ function FormPengeluaran() {
           {KATEGORI.map((k) => <option key={k.v} value={k.v}>{k.l}</option>)}
         </select></div>
       {gaji && (
-        <div className="grid gap-1.5"><Label htmlFor="pemungut">Pemungut</Label>
-          <select id="pemungut" className={SELECT} value={f.pemungut_id} data-testid="select-pemungut" onChange={(e) => pilihPemungut(e.target.value)}>
-            <option value="">— pilih pemungut —</option>
-            {pemungut.map((u) => <option key={u.id} value={u.id}>{u.nama} ({formatRupiah(u.gaji_bulanan)}/bln)</option>)}
+        <div className="grid gap-1.5"><Label htmlFor="pemungut">Penerima Gaji</Label>
+          <select id="pemungut" className={SELECT} value={f.pemungut_id} data-testid="select-pemungut" onChange={(e) => pilihPenerima(e.target.value)}>
+            <option value="">— pilih penerima —</option>
+            {(penerima ?? []).map((u) => <option key={u.id} value={u.id}>{u.nama} · {u.jabatan || "Pegawai"} ({formatRupiah(u.gaji_bulanan)})</option>)}
           </select></div>
       )}
-      <div className={cn("grid gap-1.5", gaji ? "lg:col-span-1" : "lg:col-span-2")}><Label htmlFor="keterangan">Keterangan</Label>
-        <Input id="keterangan" value={f.keterangan} placeholder={gaji ? "Otomatis: Gaji [nama] bulan [YYYY-MM]" : "mis. Sapu & tempat sampah"}
+      <div className={cn("grid gap-1.5", gaji ? "lg:col-span-1" : "lg:col-span-2")}><Label htmlFor="keterangan">{f.kategori === "barang" ? "Barang" : "Kegiatan"}</Label>
+        <Input id="keterangan" value={f.keterangan} placeholder={gaji ? "Otomatis: Catu [nama]" : f.kategori === "barang" ? "mis. Plastik sampah" : "mis. Tk sapu lapangan 7hr"}
           data-testid="input-keterangan" onChange={(e) => setF({ ...f, keterangan: e.target.value })} /></div>
-      <div className="grid gap-1.5"><Label htmlFor="jumlah">Jumlah (Rp)</Label>
+      <div className="grid gap-1.5"><Label htmlFor="jumlah">{f.kategori === "barang" ? "Harga (Rp)" : "Nilai (Rp)"}</Label>
         <Input id="jumlah" type="number" min={1} value={f.jumlah} data-testid="input-jumlah" onChange={(e) => setF({ ...f, jumlah: e.target.value })} /></div>
+      <div className="grid gap-1.5"><Label htmlFor="catatan">Keterangan</Label>
+        <Input id="catatan" value={f.catatan} placeholder="mis. nota / kwitansi" data-testid="input-catatan" onChange={(e) => setF({ ...f, catatan: e.target.value })} /></div>
       <div className="grid gap-1.5"><Label htmlFor="tgl">Tanggal</Label>
         <Input id="tgl" type="date" value={f.tanggal} data-testid="input-tanggal-pengeluaran" onChange={(e) => setF({ ...f, tanggal: e.target.value || todayISO() })} /></div>
       <Button type="submit" className="self-end" disabled={simpan.isPending} data-testid="btn-simpan-pengeluaran"><Plus data-icon="inline-start" className="size-4" /> Simpan</Button>
-      {gaji && <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-6">Nominal terisi dari gaji dasar akun Pemungut (atur di Settings › Akun). Satu catatan gaji per pemungut per bulan.</p>}
+      {gaji && <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-7">Nominal terisi dari gaji dasar penerima (Pegawai di bawah, atau akun Pemungut di Settings). Satu catatan gaji per penerima per bulan.</p>}
     </form>
   );
 }
@@ -113,7 +116,7 @@ function TabelPengeluaran({ items }: { items: Pengeluaran[] }) {
   return (
     <div className="mt-4 overflow-x-auto rounded-xl border bg-card">
       <Table>
-        <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Kategori</TableHead><TableHead>Keterangan</TableHead><TableHead>Penerima</TableHead><TableHead>Jumlah</TableHead><TableHead>Dicatat oleh</TableHead><TableHead /></TableRow></TableHeader>
+        <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Kategori</TableHead><TableHead>Kegiatan / Barang</TableHead><TableHead>Nilai</TableHead><TableHead>Keterangan</TableHead><TableHead>Dicatat oleh</TableHead><TableHead /></TableRow></TableHeader>
         <TableBody>
           {items.length === 0 && <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Belum ada pengeluaran pada periode ini.</TableCell></TableRow>}
           {items.map((p) => (
@@ -121,8 +124,8 @@ function TabelPengeluaran({ items }: { items: Pengeluaran[] }) {
               <TableCell>{formatDateID(p.tanggal)}</TableCell>
               <TableCell><span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-semibold">{LABEL[p.kategori]}</span></TableCell>
               <TableCell>{p.keterangan}</TableCell>
-              <TableCell>{p.penerima || "-"}</TableCell>
               <TableCell className="font-mono">{formatRupiah(p.jumlah)}</TableCell>
+              <TableCell>{p.catatan || "-"}</TableCell>
               <TableCell>{p.dicatat_oleh}</TableCell>
               <TableCell><Button size="icon-sm" variant="ghost" onClick={() => confirm("Hapus pengeluaran ini?") && hapus.mutate(p.id)} data-testid={`btn-hapus-pengeluaran-${p.id}`}><Trash2 className="size-4 text-red-600" /></Button></TableCell>
             </TableRow>

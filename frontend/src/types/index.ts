@@ -25,6 +25,7 @@ export interface Pengeluaran {
   id: string;
   kategori: KategoriPengeluaran;
   keterangan: string;
+  catatan: string;
   jumlah: number;
   tanggal: string;
   pemungut_id: string | null;
@@ -32,6 +33,17 @@ export interface Pengeluaran {
   periode_gaji: string | null;
   dicatat_oleh: string;
   created_at: string;
+}
+
+export interface Pegawai {
+  id: string;
+  nama: string;
+  jabatan: string;
+  gaji_bulanan: number;
+}
+
+export interface PenerimaGaji extends Pegawai {
+  sumber: "akun" | "pegawai";
 }
 
 export interface HargaBarang {

@@ -51,6 +51,7 @@ INDEXES: dict[str, list[IndexModel]] = {
                    partialFilterExpression={"kategori": "gaji"}),
     ],
     "harga_barang": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
+    "pegawai": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
     "sessions": [
         IndexModel([("token", ASCENDING)], name="token", unique=True),
         IndexModel([("created_at", ASCENDING)], name="created_ttl", expireAfterSeconds=604800),

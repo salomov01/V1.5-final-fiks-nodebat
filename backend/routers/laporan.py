@@ -14,6 +14,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 from lib.config import NAMA_PASAR
 from lib.dates import today_iso
+from lib.laporan_pengeluaran import pdf_pengeluaran, xlsx_pengeluaran
 from routers.auth import require_super
 from routers.payments import cari_pembayaran, rentang
 from routers.pengeluaran import LABEL_KATEGORI, cari_pengeluaran
@@ -117,10 +118,14 @@ async def export(
     tanggal: str = Query(default_factory=today_iso, pattern=r"^\d{4}-\d{2}-\d{2}$"),
     jenis: str | None = Query(None, pattern="^(iuran|sewa)$"),
 ):
-    headers, rows, totals = await _data(kind, periode, tanggal, jenis)
     dari, sampai = rentang(periode, tanggal)
-    judul = f"{JUDUL[kind]} {LABEL_PERIODE[periode]} ({dari} s/d {sampai})"
-    buf = (_xlsx if ext == "xlsx" else _pdf)(kind, judul, headers, rows, totals)
+    if kind == "pengeluaran":
+        items = await cari_pengeluaran(periode, tanggal)
+        buf = (xlsx_pengeluaran if ext == "xlsx" else pdf_pengeluaran)(items, periode, tanggal)
+    else:
+        headers, rows, totals = await _data(kind, periode, tanggal, jenis)
+        judul = f"{JUDUL[kind]} {LABEL_PERIODE[periode]} ({dari} s/d {sampai})"
+        buf = (_xlsx if ext == "xlsx" else _pdf)(kind, judul, headers, rows, totals)
     buf.seek(0)
     nama = f"{'pemasukan' if kind == 'pembayaran' else kind}-{periode}-{dari}.{ext}"
     return StreamingResponse(buf, media_type=MIME[ext], headers={"Content-Disposition": f'attachment; filename="{nama}"'})
