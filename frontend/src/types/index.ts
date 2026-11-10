@@ -143,6 +143,37 @@ export interface ScanResult {
   pedagang: Pedagang;
   sewa: (Sewa & { iuran_hari_ini_lunas: boolean })[];
   tanggal: string;
+  tunggakan: RekapTunggakan;
+}
+
+interface TunggakanBase {
+  sewa_id: string;
+  pedagang_id: string | null;
+  user_id: string | null;
+  nama: string;
+  lapak_nama: string;
+}
+
+export interface TunggakanIuran extends TunggakanBase {
+  iuran: number;
+  tanggal: string[];
+  total: number;
+}
+
+export interface TunggakanSewa extends TunggakanBase {
+  mulai: string;
+  selesai: string;
+  total_harga: number;
+  terbayar: number;
+  sisa: number;
+}
+
+export interface RekapTunggakan {
+  mulai_hitung: string;
+  iuran: TunggakanIuran[];
+  sewa: TunggakanSewa[];
+  total_iuran: number;
+  total_sewa: number;
 }
 
 export interface DashboardStats {

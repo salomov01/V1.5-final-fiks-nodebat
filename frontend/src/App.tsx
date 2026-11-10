@@ -14,6 +14,7 @@ import Pengaturan from "@/pages/admin/Pengaturan";
 import ScanQr from "@/pages/admin/ScanQr";
 import InfoPasarAdmin from "@/pages/admin/InfoPasarAdmin";
 import InputPengeluaran from "@/pages/admin/InputPengeluaran";
+import Tunggakan from "@/pages/admin/Tunggakan";
 import HargaBarangAdmin from "@/pages/admin/HargaBarangAdmin";
 import HargaBarangPublik from "@/pages/public/HargaBarang";
 import { Toaster } from "@/components/ui/sonner";
@@ -59,6 +60,7 @@ function Protected() {
           <Route path="lapak" element={<DataLapak />} />
           <Route path="pendaftaran" element={<PendaftaranLapak />} />
           <Route path="pembayaran" element={<Pembayaran />} />
+          <Route path="tunggakan" element={<Tunggakan />} />
           <Route path="scan-qr" element={<ScanQr />} />
           <Route path="info-pasar" element={<SuperOnly><InfoPasarAdmin /></SuperOnly>} />
           <Route path="pengeluaran" element={<SuperOnly><InputPengeluaran /></SuperOnly>} />

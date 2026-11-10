@@ -36,7 +36,7 @@ export default function Pembayaran() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" data-testid="judul-pembayaran">Pembayaran</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl" data-testid="judul-pembayaran">Pemasukan</h1>
           <p className="mt-1 text-sm text-muted-foreground">Laporan pemasukan Sewa Lapak & Iuran harian.</p>
         </div>
         {isSuper && <ExportLaporan qs={qs} />}

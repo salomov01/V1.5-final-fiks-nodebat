@@ -3,7 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ClipboardList, Globe, LayoutDashboard, LogOut, Menu, Newspaper,
-  ReceiptText, ScanLine, Settings, Store, Tags, Users, Wallet,
+  ReceiptText, ScanLine, Settings, Store, Tags, Users, Wallet, AlarmClock,
 } from "lucide-react";
 import logoDesa from "@/assets/logo-desa.svg";
 import { apiGet } from "@/services/api";
@@ -22,9 +22,10 @@ const NAV_ITEMS = [
   { to: "/dashboard/pedagang", label: "Data Pedagang", icon: Users },
   { to: "/dashboard/lapak", label: "Data Lapak dan Iuran", icon: Store },
   { to: "/dashboard/pendaftaran", label: "Pendaftaran Lapak", icon: ClipboardList, badge: "daftar" },
-  { to: "/dashboard/pembayaran", label: "Pembayaran", icon: ReceiptText },
-  { to: "/dashboard/scan-qr", label: "Pindai QR", icon: ScanLine },
+  { to: "/dashboard/pembayaran", label: "Pemasukan", icon: ReceiptText },
   { to: "/dashboard/pengeluaran", label: "Input Pengeluaran", icon: Wallet, superOnly: true },
+  { to: "/dashboard/tunggakan", label: "Tunggakan", icon: AlarmClock },
+  { to: "/dashboard/scan-qr", label: "Pindai QR", icon: ScanLine },
   { to: "/dashboard/info-pasar", label: "Info Pasar", icon: Newspaper, superOnly: true },
   { to: "/dashboard/harga-barang", label: "Harga Barang", icon: Tags, superOnly: true },
   { to: "/dashboard/pengaturan", label: "Settings", icon: Settings },

@@ -61,6 +61,7 @@ class ScanResult(BaseModel):
     pedagang: Pedagang
     sewa: list[ScanSewa]
     tanggal: str
+    tunggakan: dict  # RekapTunggakan pedagang ini (lihat routers/tunggakan.py)
 
 
 @router.get("/scan/{user_id}", response_model=ScanResult)
@@ -71,9 +72,10 @@ async def scan(user_id: str):
     hasil = []
     async for d in db.sewa.find({"pedagang_id": p.id, "status": "aktif", "mulai": {"$lte": today}, "selesai": {"$gte": today}}).sort("mulai", 1):
         s = await sewa_out(d)
-        lunas = bool(await db.payments.find_one({"sewa_id": s.id, "jenis": "iuran", "tanggal": today}))
+        lunas = bool(await db.iuran_lock.find_one({"_id": f"{s.id}:{today}"}))
         hasil.append(ScanSewa(**s.model_dump(), iuran_hari_ini_lunas=lunas))
-    return ScanResult(pedagang=p, sewa=hasil, tanggal=today)
+    from routers.tunggakan import rekap  # impor lokal: tunggakan.py mengimpor modul ini
+    return ScanResult(pedagang=p, sewa=hasil, tanggal=today, tunggakan=(await rekap(p.id)).model_dump())
 
 
 async def _sewa_aktif(sid: str) -> SewaOut:
@@ -83,9 +85,10 @@ async def _sewa_aktif(sid: str) -> SewaOut:
     return await sewa_out(d)
 
 
-async def _simpan(jenis: str, s: SewaOut, jumlah: int, periode: str, me: Principal) -> Payment:
+async def _simpan(jenis: str, s: SewaOut, jumlah: int, periode: str, me: Principal, tanggal_iuran: list[str] | None = None) -> Payment:
     p = Payment(jenis=jenis, sewa_id=s.id, pedagang_id=s.pedagang_id or "", user_id=s.user_id or "", nama=s.nama,
                 lapak_nama=s.lapak_nama, periode=periode, jumlah=jumlah, tanggal=today_iso(),
+                tanggal_iuran=tanggal_iuran or ([today_iso()] if jenis == "iuran" else []),
                 penagih=me.nama, sisa_setelah=s.sisa - jumlah if jenis == "sewa" else None)  # penagih = akun yang login (readonly di UI)
     await db.payments.insert_one(p.model_dump())
     await log_activity(me.username, "buat", "pembayaran", p.id, f"{jenis} {s.nama}", f"Rp{jumlah}")
@@ -142,7 +145,8 @@ async def delete_payment(pid: str, actor: str = Depends(require_super)):
     if not d:
         raise HTTPException(status_code=404, detail="Pembayaran tidak ditemukan")
     if d["jenis"] == "iuran":
-        await db.iuran_lock.delete_one({"_id": f"{d['sewa_id']}:{d['tanggal']}"})
+        hari = d.get("tanggal_iuran") or [d["tanggal"]]
+        await db.iuran_lock.delete_many({"_id": {"$in": [f"{d['sewa_id']}:{t}" for t in hari]}})
     await log_activity(actor, "hapus", "pembayaran", pid, d["nama"], f"{d['jenis']} Rp{d['jumlah']}")
     return {"deleted": True}
 

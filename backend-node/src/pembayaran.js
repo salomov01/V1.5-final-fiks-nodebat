@@ -5,6 +5,7 @@ import PDFDocument from "pdfkit";
 import { clean, db, HttpError, logActivity, newId, todayISO, wrap } from "./db.js";
 import { requireSession, requireSuper } from "./auth.js";
 import { sewaOut } from "./pasar.js";
+import { rekapTunggakan } from "./tunggakan.js";
 
 export const bayarRouter = Router();
 const col = (n) => db.collection(n);
@@ -41,19 +42,20 @@ bayarRouter.get("/scan/:userId", S, wrap(async (req, res) => {
   const t = todayISO();
   const sewa = [];
   for (const d of await col("sewa").find({ pedagang_id: p.id, status: "aktif", mulai: { $lte: t }, selesai: { $gte: t } }).sort({ mulai: 1 }).toArray()) {
-    sewa.push({ ...(await sewaOut(d)), iuran_hari_ini_lunas: !!(await col("payments").findOne({ sewa_id: d.id, jenis: "iuran", tanggal: t })) });
+    sewa.push({ ...(await sewaOut(d)), iuran_hari_ini_lunas: !!(await col("iuran_lock").findOne({ _id: `${d.id}:${t}` })) });
   }
-  res.json({ pedagang: clean(p), sewa, tanggal: t });
+  res.json({ pedagang: clean(p), sewa, tanggal: t, tunggakan: await rekapTunggakan(p.id) });
 }));
 
-async function sewaAktif(id) {
+export async function sewaAktif(id) {
   const d = await col("sewa").findOne({ id, status: "aktif" });
   if (!d) throw new HttpError(404, "Sewa aktif tidak ditemukan");
   return sewaOut(d);
 }
-async function simpan(jenis, s, jumlah, periode, user) {
+export async function simpan(jenis, s, jumlah, periode, user, tanggalIuran = null) {
   const p = { id: newId(), jenis, sewa_id: s.id, pedagang_id: s.pedagang_id || "", user_id: s.user_id || "", nama: s.nama, lapak_nama: s.lapak_nama,
-    periode, jumlah, tanggal: todayISO(), penagih: user.nama, sisa_setelah: jenis === "sewa" ? s.sisa - jumlah : null, status: "lunas", created_at: new Date() }; // penagih = akun login
+    periode, jumlah, tanggal: todayISO(), penagih: user.nama, sisa_setelah: jenis === "sewa" ? s.sisa - jumlah : null,
+    tanggal_iuran: tanggalIuran || (jenis === "iuran" ? [todayISO()] : []), status: "lunas", created_at: new Date() }; // penagih = akun login
   await col("payments").insertOne(p);
   await logActivity(user.username, "buat", "pembayaran", p.id, `${jenis} ${s.nama}`, `Rp${jumlah}`);
   return clean(p);
@@ -86,7 +88,10 @@ bayarRouter.get("/payments/:id/kuitansi", S, wrap(async (req, res) => {
 bayarRouter.delete("/payments/:id", SUPER, wrap(async (req, res) => {
   const d = await col("payments").findOneAndDelete({ id: req.params.id });
   if (!d) throw new HttpError(404, "Pembayaran tidak ditemukan");
-  if (d.jenis === "iuran") await col("iuran_lock").deleteOne({ _id: `${d.sewa_id}:${d.tanggal}` });
+  if (d.jenis === "iuran") {
+    const hari = d.tanggal_iuran?.length ? d.tanggal_iuran : [d.tanggal];
+    await col("iuran_lock").deleteMany({ _id: { $in: hari.map((t) => `${d.sewa_id}:${t}`) } });
+  }
   res.json({ deleted: true });
 }));
 

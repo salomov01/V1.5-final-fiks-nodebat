@@ -164,6 +164,7 @@ class Payment(BaseModel):
     tanggal: str  # tanggal bayar (zona APP_TZ)
     penagih: str
     sisa_setelah: int | None = None  # sisa sewa tepat setelah pembayaran (kuitansi)
+    tanggal_iuran: list[str] = Field(default_factory=list)  # hari iuran yang dilunasi (pembayaran tunggakan)
     status: Literal["lunas"] = "lunas"
     created_at: datetime = Field(default_factory=utcnow)
 

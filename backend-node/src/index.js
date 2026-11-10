@@ -7,6 +7,7 @@ import { authRouter } from "./auth.js";
 import { pasarRouter } from "./pasar.js";
 import { bayarRouter } from "./pembayaran.js";
 import { keuanganRouter } from "./keuangan.js";
+import { tunggakanRouter } from "./tunggakan.js";
 
 const app = express();
 app.set("trust proxy", true);
@@ -26,7 +27,7 @@ app.use((req, res, next) => {
 
 const api = express.Router();
 api.get("/health", (_req, res) => res.json({ ok: true }));
-api.use(authRouter, pasarRouter, bayarRouter, keuanganRouter);
+api.use(authRouter, pasarRouter, bayarRouter, keuanganRouter, tunggakanRouter);
 app.use("/api", api);
 
 // Format error sama dengan FastAPI: { detail: "..." }

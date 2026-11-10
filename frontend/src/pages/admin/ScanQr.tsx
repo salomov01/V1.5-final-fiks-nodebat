@@ -9,6 +9,8 @@ import { formatDateID, formatRupiah } from "@/utils/format";
 import { useAuth } from "@/hooks/useAuth";
 import type { Payment, ScanResult } from "@/types";
 import { KuitansiDialog } from "@/components/pembayaran/KuitansiDialog";
+import { BayarTunggakanDialog, type PilihTunggakan } from "@/components/tunggakan/BayarTunggakanDialog";
+import { TunggakanPanel } from "@/components/tunggakan/TunggakanPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -23,6 +25,7 @@ export default function ScanQr() {
   const [manual, setManual] = useState("");
   const [hasil, setHasil] = useState<ScanResult | null>(null);
   const [kuitansi, setKuitansi] = useState<string | null>(null);
+  const [pilih, setPilih] = useState<PilihTunggakan | null>(null);
 
   const stop = async () => {
     const s = scannerRef.current;
@@ -100,6 +103,7 @@ export default function ScanQr() {
                 <Input id="scan-penagih" readOnly value={me?.nama ?? ""} className="cursor-not-allowed bg-slate-100 font-semibold" data-testid="input-penagih-scan" />
               </div>
               {hasil.sewa.length === 0 && <p className="rounded-xl bg-slate-100 p-4 text-sm" data-testid="scan-tanpa-sewa">Pedagang ini belum punya sewa lapak aktif.</p>}
+              <TunggakanPanel rekap={hasil.tunggakan} onPilih={setPilih} />
               {hasil.sewa.map((s) => (
                 <div key={s.id} className="rounded-xl border p-4" data-testid={`scan-sewa-${s.id}`}>
                   <p className="flex items-center gap-2 font-semibold"><Store className="size-4 text-brand" /> {s.lapak_nama}</p>
@@ -121,6 +125,10 @@ export default function ScanQr() {
         </div>
       </div>
       <KuitansiDialog paymentId={kuitansi} onClose={() => setKuitansi(null)} />
+      <BayarTunggakanDialog pilih={pilih} onClose={() => setPilih(null)} onPaid={(id) => {
+        setPilih(null); setKuitansi(id);
+        if (hasil) void apiGet<ScanResult>(`/scan/${hasil.pedagang.user_id}`).then(setHasil);
+      }} />
     </div>
   );
 }

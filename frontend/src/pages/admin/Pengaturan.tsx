@@ -3,6 +3,7 @@ import { BRANDING } from "@/config";
 import DefaultPasswordAlert from "@/components/common/DefaultPasswordAlert";
 import GantiPasswordCard from "@/components/pengaturan/GantiPasswordCard";
 import UserManager from "@/components/pengaturan/UserManager";
+import { MulaiTunggakanCard } from "@/components/pengaturan/MulaiTunggakanCard";
 import { ROLE_LABEL, useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { initials } from "@/utils/format";
@@ -42,6 +43,7 @@ export default function Pengaturan() {
             </div>
           </CardContent>
         </Card>
+        {isSuper && <MulaiTunggakanCard />}
         {/* Kelola akun hanya tampil untuk Super Admin */}
         {isSuper && <UserManager />}
       </div>
