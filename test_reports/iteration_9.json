@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 9 tested the Tunggakan feature (backend and UI), Pindai QR tunggakan integration, Settings > Mulai Hitung Tunggakan, and the new sidebar order and labels. Backend: new tests/test_tunggakan.py has 6 tests and all pass. Regression ran test_keuangan, test_kuitansi, test_laporan_pengeluaran and test_pasar_flow: 53 tests, all pass, which covers kuitansi and the pemasukan, pengeluaran and rekap exports. Backend checks that passed: GET /tunggakan shape and totals, today not counted, staff access, the pedagang_id filter, 401 without login. GET/PUT /pengaturan/tunggakan: staff 403, future date 422, bad format 422, changing mulai changes the days, a mulai before the sewa start is clipped to sewa.mulai. POST /payments/tunggakan-iuran: one payment of iuran*n with periode 'Tunggakan n hari: ...' and tanggal_iuran; dedupes duplicate dates; 409 for already-paid, today, future, before-mulai and before-sewa dates; a failed request leaves no locks; empty list 422; unknown sewa 404; staff can pay but gets 403 on delete; super admin delete restores the days. Today's iuran works separately: paying tunggakan days does not set iuran_hari_ini_lunas, the normal iuran sets it and is never listed as tunggakan, and a second payment gets 409. Partial sewa payment by staff lowers sisa in /tunggakan and in the scan result. UI: super admin sidebar order and labels exactly as specified. Staff sees Dashboard, Data Pedagang, Data Lapak dan Iuran, Pendaftaran Lapak, Pemasukan, Tunggakan, Pindai QR, Settings. Pembayaran heading reads 'Pemasukan'. /dashboard/tunggakan: totals, tabs, search filter, dialog with all days checked by default, the btn-pilih-semua-hari toggle (Rp 0 and button disabled when empty), the total updates when one day is unchecked, paying 2 of 3 days opens the kuitansi with periode 'Tunggakan 2 hari: 07/11/2026, 08/11/2026' and refreshes the row, the sewa dialog defaults to sisa and a partial payment of 25000 works. Scan QR as staff with 01-009: scan-tunggakan panel shown, iuran and sewa tunggakan confirmed, kuitansi penagih is 'I Made Pemungut', the panel refreshes to scan-tanpa-tunggakan. The Settings card is hidden for staff; for super admin, save shows a toast and the Tunggakan page shows days 03–04. No bugs found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Settings > Mulai Hitung Tunggakan", "issues": ["Uses the browser's native <input type=date> instead of a shadcn Calendar/DatePicker. Works, but looks different from the rest of the UI."]},
+      {"screen": "/dashboard/tunggakan", "issues": ["No loading or error state. While loading it shows Rp 0 and the 'Tidak ada tunggakan.' text, which can briefly suggest there are no arrears."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_tunggakan.py", "/app/test_reports/pytest/pytest_tunggakan.xml", "/app/test_reports/pytest/pytest_regression9.xml"],
+  "action_items": [
+    "Optional: show loading/error state in Tunggakan.tsx (useQuery isLoading/isError) instead of Rp 0 and an empty table",
+    "Optional: replace the native date input in MulaiTunggakanCard with the shadcn date picker",
+    "Decide the business rule: rekap() only counts sewa with status 'aktif'. If a sewa is ended or cancelled with unpaid iuran or sisa sewa, its arrears drop out of the Tunggakan list"
+  ],
+  "critical_code_review_comments": [
+    "tunggakan.rekap() makes N+1 queries: for each active sewa it runs an iuran_lock regex find plus sewa_out (a payments aggregate). Fine for the current size; for hundreds of lapak, batch-load the locks with one query (e.g. $in on sewa ids, or store sewa_id on the lock docs).",
+    "bayar_tunggakan_iuran: if _simpan (insert or log) fails after the locks are inserted, the locks stay and the days count as paid with no payment. Wrap it in try/except and release the locks on failure.",
+    "Tunggakan arrears depend on status=='aktif' (see action items). Expired sewa still marked 'aktif' keep counting until selesai, which is correct."
+  ],
+  "updated_files": ["/app/backend/tests/test_tunggakan.py"],
+  "success_rate": {"backend": "100% (59/59)", "frontend": "100%"},
+  "seed_data_creation": "No new seed data. Used the temporary sewa 'tmp-sewa-tg'. Cleanup done as requested: deleted 6 payments with sewa_id tmp-sewa-tg, 6 iuran_lock docs 'tmp-sewa-tg:*', and the sewa tmp-sewa-tg, then set pengaturan tunggakan mulai to 2026-11-10. GET /api/tunggakan now returns empty lists. Activity-log entries from the tests remain.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_tunggakan.py needs the temp sewa 'tmp-sewa-tg' to exist: pedagang 01-009 id d4c87879-5e3f-44a6-b4d2-5b1535b9bced, lapak_id 704a98cd-cb32-4c07-9f86-bd3f1fdfccb5 'Warung Nasi Bu Joko', 2026-11-01..2026-11-30, iuran 5000, total_harga 300000, status aktif. It also needs pengaturan mulai=2026-11-05, days 11-05/06 paid by one tunggakan payment, and today's (2026-11-10) iuran paid. All of this was deleted at the end, so recreate it before re-running. Run: cd /app/backend && BACKEND_URL=<REACT_APP_BACKEND_URL> pytest tests/test_tunggakan.py -n0 -p no:randomly. The test restores its own state except for sewa payments. Browser clock is 2026-11-10 WITA. Checkbox data-state attr is not exposed (base-ui), so check the total text or a screenshot instead."
+}

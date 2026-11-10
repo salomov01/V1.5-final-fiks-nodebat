@@ -43,7 +43,7 @@ export default function Tunggakan() {
           </div>
         </div>
         <TabsContent value="iuran">
-          <Tabel kolom={["Pedagang", "Lapak", "Hari", "Total", ""]} kosong={!iuran.length}>
+          <Tabel kolom={["Pedagang", "Lapak", "Hari", "Total", ""]} kosong={!!data && !iuran.length} memuat={!data}>
             {iuran.map((t) => (
               <TableRow key={t.sewa_id} data-testid={`row-tunggakan-iuran-${t.sewa_id}`}>
                 <TableCell><p className="font-medium">{t.nama}</p><p className="font-mono text-xs text-muted-foreground">{t.user_id}</p></TableCell>
@@ -56,7 +56,7 @@ export default function Tunggakan() {
           </Tabel>
         </TabsContent>
         <TabsContent value="sewa">
-          <Tabel kolom={["Pedagang", "Lapak", "Masa Sewa", "Terbayar", "Sisa", ""]} kosong={!sewa.length}>
+          <Tabel kolom={["Pedagang", "Lapak", "Masa Sewa", "Terbayar", "Sisa", ""]} kosong={!!data && !sewa.length} memuat={!data}>
             {sewa.map((t) => (
               <TableRow key={t.sewa_id} data-testid={`row-tunggakan-sewa-${t.sewa_id}`}>
                 <TableCell><p className="font-medium">{t.nama}</p><p className="font-mono text-xs text-muted-foreground">{t.user_id}</p></TableCell>
@@ -86,12 +86,13 @@ function Ringkas({ label, nilai, jumlah, id }: { label: string; nilai: number; j
   );
 }
 
-function Tabel({ kolom, kosong, children }: { kolom: string[]; kosong: boolean; children: React.ReactNode }) {
+function Tabel({ kolom, kosong, memuat, children }: { kolom: string[]; kosong: boolean; memuat: boolean; children: React.ReactNode }) {
   return (
     <div className="mt-3 overflow-x-auto rounded-xl border bg-card">
       <Table>
         <TableHeader><TableRow>{kolom.map((k, i) => <TableHead key={i}>{k}</TableHead>)}</TableRow></TableHeader>
         <TableBody>
+          {memuat && <TableRow><TableCell colSpan={kolom.length} className="py-8 text-center text-sm text-muted-foreground" data-testid="tunggakan-memuat">Memuat data tunggakan…</TableCell></TableRow>}
           {kosong && <TableRow><TableCell colSpan={kolom.length} className="py-8 text-center text-sm text-muted-foreground">Tidak ada tunggakan.</TableCell></TableRow>}
           {children}
         </TableBody>
